@@ -1,0 +1,13 @@
+{
+  "name": "magpie-mcp",
+  "version": "0.1.0",
+  "description": "MCP stdio server for Magpie campaign management",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

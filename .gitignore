@@ -1,0 +1,30 @@
+# Secrets / config
+.env
+session.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+.venv/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Debug screenshots
+debug_*.png
+
+# Data
+*.db
+*.db-wal
+*.db-shm
+
+# IDE
+.vscode/
+.idea/
+
+# CLAUDE.md — gitignored per BSL 1.1 + docs-location policy
+CLAUDE.md

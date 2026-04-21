@@ -1,0 +1,130 @@
+/**
+ * Magpie — Central Theme
+ * Theme-aware, responsive CSS classes. All components use these.
+ */
+
+:root {
+  --color-bg:           #0f1117;
+  --color-bg-secondary: #1a1d27;
+  --color-bg-card:      #1e2130;
+  --color-border:       #2d3148;
+  --color-text:         #e2e8f0;
+  --color-text-muted:   #8892a4;
+  --color-primary:      #7c6af7;
+  --color-primary-dim:  #3d3578;
+  --color-success:      #34d399;
+  --color-warning:      #fbbf24;
+  --color-danger:       #f87171;
+  --color-info:         #60a5fa;
+
+  --spacing-xs:  4px;
+  --spacing-sm:  8px;
+  --spacing-md:  16px;
+  --spacing-lg:  24px;
+  --spacing-xl:  40px;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+
+  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans:   system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg:           #f8f9fc;
+    --color-bg-secondary: #ffffff;
+    --color-bg-card:      #ffffff;
+    --color-border:       #dde1ec;
+    --color-text:         #1a1d27;
+    --color-text-muted:   #6b7280;
+    --color-primary:      #5b4fcf;
+    --color-primary-dim:  #ede9ff;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---- Layout ---- */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--color-bg-secondary); border-right: 1px solid var(--color-border); padding: var(--spacing-lg) var(--spacing-md); flex-shrink: 0; }
+.main-content { flex: 1; padding: var(--spacing-lg); overflow-y: auto; }
+
+/* ---- Nav ---- */
+.nav-brand { font-size: 18px; font-weight: 700; color: var(--color-primary); margin-bottom: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-sm); }
+.nav-link { display: block; padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); color: var(--color-text-muted); text-decoration: none; margin-bottom: 2px; transition: background 0.15s, color 0.15s; }
+.nav-link:hover, .nav-link.active { background: var(--color-primary-dim); color: var(--color-primary); }
+
+/* ---- Cards ---- */
+.card { background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-md); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--spacing-md); }
+
+/* ---- Buttons ---- */
+.btn { display: inline-flex; align-items: center; gap: var(--spacing-xs); padding: 6px var(--spacing-md); border-radius: var(--radius-md); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-ghost { background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-success { background: var(--color-success); color: #111; }
+.btn-sm { padding: 4px var(--spacing-sm); font-size: 12px; }
+
+/* ---- Badges ---- */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge-success { background: color-mix(in srgb, var(--color-success) 20%, transparent); color: var(--color-success); }
+.badge-warning { background: color-mix(in srgb, var(--color-warning) 20%, transparent); color: var(--color-warning); }
+.badge-danger  { background: color-mix(in srgb, var(--color-danger)  20%, transparent); color: var(--color-danger);  }
+.badge-info    { background: color-mix(in srgb, var(--color-info)    20%, transparent); color: var(--color-info);    }
+.badge-muted   { background: color-mix(in srgb, var(--color-text-muted) 15%, transparent); color: var(--color-text-muted); }
+
+/* ---- Forms ---- */
+.form-label { display: block; font-size: 12px; font-weight: 500; color: var(--color-text-muted); margin-bottom: var(--spacing-xs); }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 8px var(--spacing-sm); background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  color: var(--color-text); font-size: 13px; font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none; border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+.form-textarea { resize: vertical; min-height: 100px; font-family: var(--font-mono); font-size: 12px; }
+.form-group { margin-bottom: var(--spacing-md); }
+
+/* ---- Table ---- */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; padding: var(--spacing-sm) var(--spacing-md); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); }
+.table td { padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border); }
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: color-mix(in srgb, var(--color-primary) 5%, transparent); }
+
+/* ---- Status dots ---- */
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.status-dot.success { background: var(--color-success); }
+.status-dot.failed  { background: var(--color-danger); }
+.status-dot.pending { background: var(--color-warning); }
+.status-dot.skipped { background: var(--color-text-muted); }
+.status-dot.running { background: var(--color-info); animation: pulse 1s infinite; }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ---- Page header ---- */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-lg); }
+.page-title { font-size: 20px; font-weight: 700; }
+
+/* ---- Empty state ---- */
+.empty-state { text-align: center; padding: var(--spacing-xl); color: var(--color-text-muted); }
+
+/* ---- SR only ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
