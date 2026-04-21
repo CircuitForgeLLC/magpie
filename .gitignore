@@ -21,6 +21,7 @@ debug_*.png
 *.db
 *.db-wal
 *.db-shm
+data/
 
 # IDE
 .vscode/
