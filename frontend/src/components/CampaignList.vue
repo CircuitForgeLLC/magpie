@@ -12,7 +12,7 @@
     </div>
 
     <div v-else class="card" style="padding: 0; overflow: hidden;">
-      <table class="table">
+      <table class="table table-responsive">
         <thead>
           <tr>
             <th>Name</th>
@@ -24,21 +24,21 @@
         </thead>
         <tbody>
           <tr v-for="c in store.campaigns" :key="c.id">
-            <td>
+            <td data-label="Name">
               <router-link :to="`/campaigns/${c.id}`" style="color: var(--color-primary); text-decoration: none; font-weight: 500;">
                 {{ c.name }}
               </router-link>
             </td>
-            <td><span class="badge badge-info">{{ c.product }}</span></td>
-            <td style="font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted);">
+            <td data-label="Product"><span class="badge badge-info">{{ c.product }}</span></td>
+            <td data-label="Schedule" class="text-mono text-sm text-muted">
               {{ c.cron_schedule ?? '— manual' }}
             </td>
-            <td>
+            <td data-label="Status">
               <span :class="['badge', c.active ? 'badge-success' : 'badge-muted']">
                 {{ c.active ? 'active' : 'paused' }}
               </span>
             </td>
-            <td>
+            <td data-label="">
               <div style="display: flex; gap: 6px; justify-content: flex-end;">
                 <button class="btn btn-ghost btn-sm" @click="toggle(c)" :title="c.active ? 'Pause' : 'Resume'">
                   {{ c.active ? '⏸' : '▶' }}

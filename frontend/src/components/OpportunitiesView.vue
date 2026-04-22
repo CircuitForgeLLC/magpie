@@ -16,6 +16,9 @@
     </div>
 
     <div v-if="loading" class="state-empty">Loading...</div>
+    <div v-else-if="loadError" class="state-empty" style="color: var(--color-danger)">
+      Could not load opportunities: {{ loadError }}
+    </div>
     <div v-else-if="filtered.length === 0" class="state-empty">
       No opportunities{{ filterStatus ? ` with status "${filterStatus}"` : '' }}.
     </div>
@@ -199,6 +202,7 @@ const selected = ref<Opportunity | null>(null)
 const showAddModal = ref(false)
 const copied = ref(false)
 const filterStatus = ref<OpportunityStatus | ''>('')
+const loadError = ref<string | null>(null)
 
 const editBody = ref('')
 const editTitle = ref('')
@@ -222,8 +226,11 @@ const filtered = computed(() =>
 
 async function load() {
   loading.value = true
+  loadError.value = null
   try {
     opportunities.value = await api.opportunities.list()
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : 'Failed to load opportunities'
   } finally {
     loading.value = false
   }

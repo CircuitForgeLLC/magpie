@@ -147,6 +147,54 @@ export interface ApproveResult {
   instructions: string
 }
 
+export type SignalMatchMode = 'any' | 'all' | 'regex'
+export type SignalLabel = 'pain-point' | 'feedback' | 'mention' | 'trust'
+export type SignalStatus = 'new' | 'saved' | 'dismissed'
+
+export interface SignalRule {
+  id: number
+  name: string
+  platform: string
+  sub: string | null
+  keywords: string[]
+  match_mode: SignalMatchMode
+  min_score: number
+  label: SignalLabel | null
+  active: number
+  created_at: string
+  notes: string | null
+}
+
+export interface SignalRuleCreate {
+  name: string
+  platform?: string
+  sub?: string | null
+  keywords?: string[]
+  match_mode?: SignalMatchMode
+  min_score?: number
+  label?: SignalLabel | null
+  notes?: string | null
+}
+
+export interface Signal {
+  id: number
+  platform: string
+  sub: string
+  post_id: string
+  title: string
+  body_snippet: string | null
+  score: number | null
+  comment_count: number | null
+  author: string | null
+  url: string | null
+  posted_at: string | null
+  surfaced_at: string
+  matched_keywords: string[]
+  status: SignalStatus
+  notes: string | null
+  matched_rules?: SignalRule[]
+}
+
 // ------------------------------------------------------------------ //
 // Campaigns
 // ------------------------------------------------------------------ //
@@ -232,5 +280,33 @@ export const api = {
 
     dismiss: (id: number, note?: string) =>
       http.post<Opportunity>(`/opportunities/${id}/dismiss`, { note: note ?? null }).then(r => r.data),
+  },
+
+  signalRules: {
+    list: (activeOnly = false) =>
+      http.get<SignalRule[]>('/signal-rules', { params: { active_only: activeOnly } }).then(r => r.data),
+
+    create: (data: SignalRuleCreate) =>
+      http.post<SignalRule>('/signal-rules', data).then(r => r.data),
+
+    get: (id: number) =>
+      http.get<SignalRule>(`/signal-rules/${id}`).then(r => r.data),
+
+    update: (id: number, data: Partial<SignalRuleCreate> & { active?: boolean }) =>
+      http.patch<SignalRule>(`/signal-rules/${id}`, data).then(r => r.data),
+
+    delete: (id: number) =>
+      http.delete(`/signal-rules/${id}`),
+  },
+
+  signals: {
+    list: (params?: { status?: SignalStatus; platform?: string; sub?: string; limit?: number }) =>
+      http.get<Signal[]>('/signals', { params }).then(r => r.data),
+
+    get: (id: number) =>
+      http.get<Signal>(`/signals/${id}`).then(r => r.data),
+
+    updateStatus: (id: number, status: SignalStatus, notes?: string) =>
+      http.patch<Signal>(`/signals/${id}/status`, { status, notes: notes ?? null }).then(r => r.data),
   },
 }

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.services.poster import run_campaign
 
@@ -119,3 +120,54 @@ def sync_all_campaigns(campaigns: list[dict]) -> None:
     for campaign in campaigns:
         sync_campaign(campaign)
     logger.info("Synced %d campaign(s) to scheduler", len(campaigns))
+
+
+# ------------------------------------------------------------------ #
+# Signal scraper job
+# ------------------------------------------------------------------ #
+
+_SCRAPER_JOB_ID = "signal_scraper"
+
+
+async def _run_scraper_job() -> None:
+    """APScheduler coroutine target: run one pass of signal scraping."""
+    from app.services.scraper import scrape_signals  # deferred to avoid circular imports
+    logger.info("Signal scraper job starting")
+    try:
+        summary = await scrape_signals()
+        logger.info(
+            "Signal scraper done: %d sub(s), %d post(s) seen, %d signal(s) found",
+            summary["subs_scraped"], summary["posts_seen"], summary["signals_found"],
+        )
+    except Exception:
+        logger.exception("Unhandled error in signal scraper job")
+
+
+def start_scraper_job(interval_mins: int = 30) -> None:
+    """
+    Register (or replace) the signal scraper interval job.
+
+    Call this at startup when scraper_enabled=True.
+    """
+    sched = get_scheduler()
+    existing = sched.get_job(_SCRAPER_JOB_ID)
+    if existing:
+        existing.remove()
+
+    sched.add_job(
+        _run_scraper_job,
+        trigger=IntervalTrigger(minutes=interval_mins, timezone="UTC"),
+        id=_SCRAPER_JOB_ID,
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("Signal scraper scheduled every %d minute(s)", interval_mins)
+
+
+def stop_scraper_job() -> None:
+    """Remove the signal scraper job (e.g. when disabling via settings)."""
+    sched = get_scheduler()
+    existing = sched.get_job(_SCRAPER_JOB_ID)
+    if existing:
+        existing.remove()
+        logger.info("Signal scraper job removed")

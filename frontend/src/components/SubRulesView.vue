@@ -6,7 +6,7 @@
     </div>
 
     <div class="card" style="padding: 0; overflow: hidden;">
-      <table class="table">
+      <table class="table table-responsive">
         <thead>
           <tr>
             <th>Sub / Channel</th>
@@ -20,25 +20,25 @@
         </thead>
         <tbody>
           <tr v-for="r in rules" :key="r.id">
-            <td style="font-weight: 500;">{{ r.sub }}</td>
-            <td><span class="badge badge-muted">{{ r.platform }}</span></td>
-            <td>
+            <td data-label="Sub" style="font-weight: 500;">{{ r.sub }}</td>
+            <td data-label="Platform"><span class="badge badge-muted">{{ r.platform }}</span></td>
+            <td data-label="Flair">
               <span v-if="r.flair_required">{{ r.flair_to_use ?? '(required, unknown)' }}</span>
               <span v-else style="color: var(--color-text-muted);">—</span>
             </td>
-            <td>
+            <td data-label="Promo">
               <span v-if="r.promo_allowed === null" class="badge badge-muted">unknown</span>
               <span v-else-if="r.promo_allowed" class="badge badge-success">allowed</span>
               <span v-else class="badge badge-danger">banned</span>
             </td>
-            <td>
+            <td data-label="Rule Warning">
               <span v-if="r.rule_warning" class="badge badge-warning">yes</span>
               <span v-else style="color: var(--color-text-muted);">—</span>
             </td>
-            <td style="color: var(--color-text-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <td data-label="Notes" style="color: var(--color-text-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               {{ r.notes ?? '—' }}
             </td>
-            <td>
+            <td data-label="">
               <button class="btn btn-ghost btn-sm" @click="startEdit(r)">Edit</button>
             </td>
           </tr>

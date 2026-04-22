@@ -12,7 +12,7 @@
       </button>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+    <div class="detail-grid">
       <!-- Left: variants + subs -->
       <div>
         <!-- Variants -->
@@ -52,7 +52,7 @@
       <!-- Right: recent posts -->
       <div class="card" style="padding: 0; overflow: hidden; align-self: start;">
         <div class="card-title" style="padding: var(--spacing-md) var(--spacing-md) 0;">Recent Posts</div>
-        <table class="table">
+        <table class="table table-responsive">
           <thead>
             <tr>
               <th>Sub</th>
@@ -62,13 +62,13 @@
           </thead>
           <tbody>
             <tr v-for="p in recentPosts" :key="p.id">
-              <td>r/{{ p.target }}</td>
-              <td>
+              <td data-label="Sub">r/{{ p.target }}</td>
+              <td data-label="Status">
                 <span :class="['status-dot', p.status]"></span>
                 <a v-if="p.url" :href="p.url" target="_blank" style="color: var(--color-primary); text-decoration: none;">{{ p.status }}</a>
                 <span v-else>{{ p.status }}</span>
               </td>
-              <td style="color: var(--color-text-muted); font-size: 12px;">{{ formatDate(p.posted_at) }}</td>
+              <td data-label="When" style="color: var(--color-text-muted); font-size: 12px;">{{ formatDate(p.posted_at) }}</td>
             </tr>
             <tr v-if="recentPosts.length === 0">
               <td colspan="3" style="color: var(--color-text-muted); text-align: center; padding: var(--spacing-lg);">No posts yet.</td>
@@ -210,4 +210,12 @@ function formatDate(iso: string) {
 .modal { padding: var(--spacing-lg); }
 .variant-row { padding: var(--spacing-sm); border-bottom: 1px solid var(--color-border); }
 .variant-row:last-child { border-bottom: none; }
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+@media (max-width: 768px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
 </style>

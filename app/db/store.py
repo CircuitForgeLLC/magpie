@@ -353,3 +353,175 @@ class Store:
 
     def dismiss_opportunity(self, opportunity_id: int, note: str | None = None) -> dict | None:
         return self.update_opportunity(opportunity_id, status="dismissed", dismiss_note=note)
+
+    # ------------------------------------------------------------------ #
+    # Signal rules
+    # ------------------------------------------------------------------ #
+
+    def list_signal_rules(self, active_only: bool = False) -> list[dict]:
+        where = "WHERE active = 1" if active_only else ""
+        return self._fetchall(f"SELECT * FROM signal_rules {where} ORDER BY platform, name")
+
+    def get_signal_rule(self, rule_id: int) -> dict | None:
+        return self._fetchone("SELECT * FROM signal_rules WHERE id = ?", (rule_id,))
+
+    def create_signal_rule(
+        self,
+        name: str,
+        platform: str = "reddit",
+        sub: str | None = None,
+        keywords: list[str] | None = None,
+        match_mode: str = "any",
+        min_score: int = 0,
+        label: str | None = None,
+        notes: str | None = None,
+    ) -> dict:
+        return self._insert_returning(
+            "INSERT INTO signal_rules (name, platform, sub, keywords, match_mode, min_score, label, notes)"
+            " VALUES (?,?,?,?,?,?,?,?) RETURNING *",
+            (name, platform, sub, json.dumps(keywords or []), match_mode, min_score, label, notes),
+        )
+
+    def update_signal_rule(self, rule_id: int, **fields) -> dict | None:
+        allowed = {"name", "sub", "keywords", "match_mode", "min_score", "label", "active", "notes"}
+        updates = {}
+        for k, v in fields.items():
+            if k not in allowed:
+                continue
+            updates[k] = json.dumps(v) if k == "keywords" else v
+        if not updates:
+            return self.get_signal_rule(rule_id)
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        params = tuple(updates.values()) + (rule_id,)
+        self.conn.execute(f"UPDATE signal_rules SET {set_clause} WHERE id = ?", params)
+        self.conn.commit()
+        return self.get_signal_rule(rule_id)
+
+    def delete_signal_rule(self, rule_id: int) -> bool:
+        cur = self.conn.execute("DELETE FROM signal_rules WHERE id = ?", (rule_id,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    # ------------------------------------------------------------------ #
+    # Signals
+    # ------------------------------------------------------------------ #
+
+    def list_signals(
+        self,
+        status: str | None = None,
+        platform: str | None = None,
+        sub: str | None = None,
+        limit: int = 100,
+    ) -> list[dict]:
+        clauses, params = [], []
+        if status:
+            clauses.append("status = ?")
+            params.append(status)
+        if platform:
+            clauses.append("platform = ?")
+            params.append(platform)
+        if sub:
+            clauses.append("sub = ?")
+            params.append(sub)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        return self._fetchall(
+            f"SELECT * FROM signals {where} ORDER BY surfaced_at DESC LIMIT ?", tuple(params)
+        )
+
+    def get_signal(self, signal_id: int) -> dict | None:
+        return self._fetchone("SELECT * FROM signals WHERE id = ?", (signal_id,))
+
+    def upsert_signal(
+        self,
+        platform: str,
+        sub: str,
+        post_id: str,
+        title: str,
+        body_snippet: str | None = None,
+        score: int | None = None,
+        comment_count: int | None = None,
+        author: str | None = None,
+        url: str | None = None,
+        posted_at: str | None = None,
+        matched_keywords: list[str] | None = None,
+    ) -> dict:
+        """Insert or ignore (dedup on platform+post_id). Returns the row either way."""
+        self.conn.execute(
+            "INSERT OR IGNORE INTO signals"
+            " (platform, sub, post_id, title, body_snippet, score, comment_count,"
+            "  author, url, posted_at, matched_keywords)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (platform, sub, post_id, title, body_snippet, score, comment_count,
+             author, url, posted_at, json.dumps(matched_keywords or [])),
+        )
+        self.conn.commit()
+        return self._fetchone(
+            "SELECT * FROM signals WHERE platform = ? AND post_id = ?", (platform, post_id)
+        )
+
+    def record_signal_rule_match(self, signal_id: int, rule_id: int) -> None:
+        """Record that a rule matched a signal (many-to-many, ignore duplicates)."""
+        self.conn.execute(
+            "INSERT OR IGNORE INTO signal_rule_matches (signal_id, rule_id) VALUES (?,?)",
+            (signal_id, rule_id),
+        )
+        self.conn.commit()
+
+    def update_signal_status(
+        self, signal_id: int, status: str, notes: str | None = None
+    ) -> dict | None:
+        self.conn.execute(
+            "UPDATE signals SET status = ?, notes = COALESCE(?, notes) WHERE id = ?",
+            (status, notes, signal_id),
+        )
+        self.conn.commit()
+        return self.get_signal(signal_id)
+
+    def get_signal_rule_matches(self, signal_id: int) -> list[dict]:
+        """Return all rules that matched a given signal."""
+        return self._fetchall(
+            "SELECT sr.* FROM signal_rules sr"
+            " JOIN signal_rule_matches srm ON sr.id = srm.rule_id"
+            " WHERE srm.signal_id = ?",
+            (signal_id,),
+        )
+
+    # ------------------------------------------------------------------ #
+    # Signal scrape state (per-sub cursor tracking)
+    # ------------------------------------------------------------------ #
+
+    def get_scrape_state(self, sub: str, platform: str = "reddit") -> dict | None:
+        return self._fetchone(
+            "SELECT * FROM signal_scrape_state WHERE platform = ? AND sub = ?",
+            (platform, sub),
+        )
+
+    def update_scrape_state(
+        self,
+        sub: str,
+        platform: str = "reddit",
+        last_fullname: str | None = None,
+        posts_seen_delta: int = 0,
+        signals_found_delta: int = 0,
+    ) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO signal_scrape_state
+                (platform, sub, last_fullname, last_scraped_at, posts_seen, signals_found)
+            VALUES (?, ?, ?, datetime('now'), ?, ?)
+            ON CONFLICT(platform, sub) DO UPDATE SET
+                last_fullname   = excluded.last_fullname,
+                last_scraped_at = excluded.last_scraped_at,
+                posts_seen      = signal_scrape_state.posts_seen + excluded.posts_seen,
+                signals_found   = signal_scrape_state.signals_found + excluded.signals_found
+            """,
+            (platform, sub, last_fullname, posts_seen_delta, signals_found_delta),
+        )
+        self.conn.commit()
+
+    def list_scrape_states(self, platform: str = "reddit") -> list[dict]:
+        return self._fetchall(
+            "SELECT * FROM signal_scrape_state WHERE platform = ? ORDER BY sub",
+            (platform,),
+        )

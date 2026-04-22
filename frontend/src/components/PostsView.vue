@@ -5,7 +5,7 @@
     </div>
 
     <div class="card" style="padding: 0; overflow: hidden;">
-      <table class="table">
+      <table class="table table-responsive">
         <thead>
           <tr>
             <th>Campaign</th>
@@ -18,15 +18,15 @@
         </thead>
         <tbody>
           <tr v-for="p in posts" :key="p.id">
-            <td>{{ campaignName(p.campaign_id) }}</td>
-            <td>{{ p.target }}</td>
-            <td>
+            <td data-label="Campaign">{{ campaignName(p.campaign_id) }}</td>
+            <td data-label="Target">{{ p.target }}</td>
+            <td data-label="Status">
               <span :class="['status-dot', p.status]"></span>{{ p.status }}
               <span v-if="p.error_msg" :title="p.error_msg" style="color: var(--color-danger); cursor: help;"> ⚠</span>
             </td>
-            <td><span class="badge badge-muted">{{ p.triggered_by }}</span></td>
-            <td style="color: var(--color-text-muted); font-size: 12px;">{{ formatDate(p.posted_at) }}</td>
-            <td>
+            <td data-label="Triggered by"><span class="badge badge-muted">{{ p.triggered_by }}</span></td>
+            <td data-label="When" style="color: var(--color-text-muted); font-size: 12px;">{{ formatDate(p.posted_at) }}</td>
+            <td data-label="Link">
               <a v-if="p.url" :href="p.url" target="_blank" style="color: var(--color-primary); font-size: 12px;">view →</a>
               <span v-else style="color: var(--color-text-muted);">—</span>
             </td>

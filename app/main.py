@@ -9,7 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import register_routes
 from app.core.config import get_settings
 from app.db.store import Store
-from app.services.scheduler import start_scheduler, stop_scheduler, sync_all_campaigns
+from app.services.scheduler import (
+    start_scheduler, stop_scheduler, sync_all_campaigns,
+    start_scraper_job,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,14 @@ async def lifespan(app: FastAPI):
     else:
         app.state.scheduler = None
         logger.info("Magpie started — scheduler disabled")
+
+    # Start signal scraper job
+    if settings.scraper_enabled:
+        if not settings.scheduler_enabled:
+            # Scraper needs the scheduler even if campaign scheduling is off
+            start_scheduler()
+        start_scraper_job(interval_mins=settings.scraper_interval_mins)
+        logger.info("Signal scraper scheduled every %d min", settings.scraper_interval_mins)
 
     store.close()
     yield

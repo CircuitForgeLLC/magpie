@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_enabled: bool = True
 
+    # Signal scraper
+    scraper_enabled: bool = True
+    scraper_interval_mins: int = 30          # how often to poll (per full pass of all subs)
+    scraper_request_delay_secs: float = 2.0  # pause between sub requests to respect rate limits
+    scraper_fetch_limit: int = 25            # posts to fetch per sub per run (max 100)
+    scraper_user_agent: str = "Magpie/0.1 signal-monitor (by CircuitForge)"
+
 
 def get_settings() -> Settings:
     return Settings()
