@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_enabled: bool = True
 
+    # Directus (CircuitForge website CMS)
+    directus_url: str = "http://172.31.0.4:8055"
+    directus_admin_token: str = ""
+    directus_admin_email: str = ""
+    directus_admin_password: str = ""
+    directus_network: str = "website_cf-internal"
+
     # Signal scraper
     scraper_enabled: bool = True
     scraper_interval_mins: int = 30          # how often to poll (per full pass of all subs)

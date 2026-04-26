@@ -308,6 +308,36 @@ const TOOLS = [
     },
   },
 
+  // Blog (Directus)
+  {
+    name: 'publish_blog_post',
+    description: 'Publish a blog post to the CircuitForge website via Directus. Defaults to published immediately. Returns the created post including its id and slug.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Post title' },
+        body: { type: 'string', description: 'Post body (Markdown)' },
+        slug: { type: 'string', description: 'URL slug — auto-generated from title if omitted' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Tag list (e.g. ["sprint-review", "kiwi"])' },
+        author: { type: 'string', description: 'Author name (optional)' },
+        seo_description: { type: 'string', description: 'Short SEO/meta description (optional)' },
+        published_at: { type: 'string', description: 'ISO 8601 publish timestamp — defaults to now' },
+      },
+      required: ['title', 'body'],
+    },
+  },
+  {
+    name: 'get_blog_post',
+    description: 'Fetch an existing blog post by its URL slug.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slug: { type: 'string', description: 'The post slug (e.g. "2026-04-28-sprint-review")' },
+      },
+      required: ['slug'],
+    },
+  },
+
   // Scheduler
   {
     name: 'scheduler_status',
@@ -381,6 +411,13 @@ async function callTool(name, args) {
       const { sub, ...body } = args;
       return await api('PUT', `/subs/${sub}`, body);
     }
+
+    case 'publish_blog_post': {
+      const { title, body, ...rest } = args;
+      return await api('POST', '/blog', { title, body, ...rest });
+    }
+    case 'get_blog_post':
+      return await api('GET', `/blog/${encodeURIComponent(args.slug)}`);
 
     case 'scheduler_status':
       return await api('GET', '/scheduler/status');
