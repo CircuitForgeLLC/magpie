@@ -412,8 +412,9 @@ def seed(store: Store) -> None:
     print()
     print("Seeding sub rules...")
     for rule in SUB_RULES:
-        sub = rule.pop("sub")
-        store.upsert_sub_rules(sub=sub, last_checked="2026-04-21", **rule)
+        sub = rule["sub"]
+        fields = {k: v for k, v in rule.items() if k != "sub"}
+        store.upsert_sub_rules(sub=sub, last_checked="2026-04-21", **fields)
         allowed = "OK" if rule.get("promo_allowed") else "BANNED"
         print(f"  r/{sub}: {allowed}")
 
