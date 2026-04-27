@@ -77,8 +77,11 @@ def _run_post(db_path: str, campaign_id: int, target: str,
         )
         post_id = post["id"]
 
-        # Build extra dict from sub_row
+        # Build extra dict from sub_row; merge variant-level blog fields (blog_post strategy uses them)
         extra = dict(sub_row)
+        for field in ("slug", "tags", "seo_description"):
+            if variant.get(field) is not None:
+                extra.setdefault(field, variant[field])
 
         # Execute strategy
         flair = variant.get("flair") or (rules.get("flair_to_use") if rules else None)
