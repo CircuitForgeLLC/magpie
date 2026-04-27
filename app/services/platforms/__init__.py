@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from app.services.platforms.base import PostingStrategy, PostResult
 from app.services.platforms.reddit_post import RedditPostStrategy
+from app.services.platforms.reddit_comment import RedditCommentStrategy
 
 _REGISTRY: dict[str, PostingStrategy] = {
     s.campaign_type: s()
     for s in [
         RedditPostStrategy,
-        # RedditCommentStrategy — added in Plan B
+        RedditCommentStrategy,
         # BlogPostStrategy — added in Plan C
     ]
 }

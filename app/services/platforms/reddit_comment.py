@@ -7,6 +7,8 @@ from datetime import date, timedelta
 import httpx
 
 from app.services.platforms.base import PostingStrategy, PostResult
+from app.services.reddit.client import RedditClient
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +87,51 @@ def _find_sticky(
         if pattern_lower in title.lower():
             return post.get("id")
     return None
+
+
+class RedditCommentStrategy(PostingStrategy):
+    campaign_type = "reddit_comment"
+
+    def supports_dupe_guard(self) -> bool:
+        return False  # comment threads may appear multiple times
+
+    def execute(
+        self,
+        *,
+        target: str,
+        title: str,
+        body: str,
+        flair: str | None = None,
+        extra: dict | None = None,
+    ) -> PostResult:
+        extra = extra or {}
+        thread_url_override = extra.get("thread_url_override")
+        thread_title_pattern = extra.get("thread_title_pattern")
+        session_file = get_settings().reddit_session_file
+
+        # Resolve thread_id
+        if thread_url_override:
+            thread_id = _extract_thread_id_from_url(thread_url_override)
+        elif thread_title_pattern:
+            thread_id = _find_sticky(
+                sub=target,
+                title_pattern=thread_title_pattern,
+                session_file=session_file,
+            )
+            if thread_id is None:
+                raise ValueError(
+                    f"No thread matching {thread_title_pattern!r} found in r/{target}"
+                )
+        else:
+            raise ValueError(
+                "RedditCommentStrategy requires thread_url_override or thread_title_pattern in extra"
+            )
+
+        client = RedditClient(session_file=session_file)
+        comment_url = client.comment(thread_id=thread_id, body=body)
+
+        # Reddit comment() may return empty URL; reconstruct from thread_id
+        if not comment_url:
+            comment_url = f"https://www.reddit.com/r/{target}/comments/{thread_id}/"
+
+        return PostResult(url=comment_url, metadata={"thread_id": thread_id})
