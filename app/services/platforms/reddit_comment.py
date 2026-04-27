@@ -73,8 +73,12 @@ def _find_sticky(
     """
     # TODO: use session_file for authenticated requests on private subs
     url = f"https://www.reddit.com/r/{sub}/hot.json?limit=10"
-    response = httpx.get(url, headers={"User-Agent": "magpie/1.0"})
-    response.raise_for_status()
+    try:
+        response = httpx.get(url, headers={"User-Agent": "magpie/1.0"}, timeout=10)
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        logger.warning("Reddit hot.json request failed for r/%s: %s", sub, exc)
+        raise RuntimeError(f"Failed to fetch hot listing for r/{sub}") from exc
     payload = response.json()
     if "data" not in payload:
         logger.warning("Unexpected Reddit API response: %r", payload)

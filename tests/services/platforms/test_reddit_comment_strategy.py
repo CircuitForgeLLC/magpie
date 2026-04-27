@@ -9,7 +9,7 @@ def strategy():
     return RedditCommentStrategy()
 
 
-def test_execute_with_url_override(strategy, monkeypatch):
+def test_execute_with_url_override(strategy):
     """Uses thread_url_override to get thread_id, calls client.comment()"""
     mock_client = MagicMock()
     mock_client.comment.return_value = "https://www.reddit.com/r/flipping/comments/abc123/_/xyz789/"
