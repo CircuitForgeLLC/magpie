@@ -90,10 +90,11 @@ class Store:
         return self._fetchone("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
 
     def create_campaign(self, name: str, product: str, platform: str = "reddit",
-                        cron_schedule: str | None = None, notes: str | None = None) -> dict:
+                        cron_schedule: str | None = None, notes: str | None = None,
+                        type: str = "reddit_post") -> dict:
         return self._insert_returning(
-            "INSERT INTO campaigns (name, product, platform, cron_schedule, notes) VALUES (?,?,?,?,?) RETURNING *",
-            (name, product, platform, cron_schedule, notes),
+            "INSERT INTO campaigns (name, product, platform, cron_schedule, notes, type) VALUES (?,?,?,?,?,?) RETURNING *",
+            (name, product, platform, cron_schedule, notes, type),
         )
 
     def update_campaign(self, campaign_id: int, **fields) -> dict | None:
