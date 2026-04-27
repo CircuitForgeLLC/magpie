@@ -53,7 +53,7 @@ def _extract_thread_id_from_url(url: str) -> str:
         https://www.reddit.com/r/<sub>/comments/<id>/<title>/
     Raises ValueError if the ID cannot be found.
     """
-    match = re.search(r"/comments/([a-z0-9]+)/", url)
+    match = re.search(r"/comments/([a-zA-Z0-9]+)/", url)
     if not match:
         raise ValueError(f"Cannot extract thread id from {url!r}")
     return match.group(1)
@@ -69,9 +69,14 @@ def _find_sticky(
     Uses the Reddit public JSON API (no auth required).
     Returns the post ID (e.g. "abc123") of the first match, or None.
     """
+    # TODO: use session_file for authenticated requests on private subs
     url = f"https://www.reddit.com/r/{sub}/hot.json?limit=10"
     response = httpx.get(url, headers={"User-Agent": "magpie/1.0"})
+    response.raise_for_status()
     payload = response.json()
+    if "data" not in payload:
+        logger.warning("Unexpected Reddit API response: %r", payload)
+        return None
     children = payload.get("data", {}).get("children", [])
     pattern_lower = title_pattern.lower()
     for child in children:

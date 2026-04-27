@@ -51,11 +51,8 @@ def test_parse_occurrence_first_sunday():
 
 
 def test_parse_occurrence_unknown_raises():
-    try:
+    with pytest.raises(ValueError):
         parse_occurrence("fourth_wednesday")
-        assert False, "Expected ValueError"
-    except ValueError:
-        pass
 
 
 # --- _extract_thread_id_from_url ---
