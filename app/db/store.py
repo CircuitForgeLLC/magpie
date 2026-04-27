@@ -213,10 +213,19 @@ class Store:
         )
 
     def create_post(self, campaign_id: int, target: str, variant_id: int | None = None,
-                    platform: str = "reddit", triggered_by: str = "scheduler") -> dict:
+                    platform: str = "reddit", triggered_by: str = "scheduler",
+                    opportunity_id: int | None = None) -> dict:
         return self._insert_returning(
-            "INSERT INTO posts (campaign_id, variant_id, platform, target, status, triggered_by) VALUES (?,?,?,?,'pending',?) RETURNING *",
-            (campaign_id, variant_id, platform, target, triggered_by),
+            "INSERT INTO posts (campaign_id, variant_id, platform, target, status, triggered_by, opportunity_id) VALUES (?,?,?,?,'pending',?,?) RETURNING *",
+            (campaign_id, variant_id, platform, target, triggered_by, opportunity_id),
+        )
+
+    def log_manual_post(self, opportunity_id: int, platform: str, target: str,
+                        url: str | None = None) -> dict:
+        """Create a success post record for a manually executed opportunity post."""
+        return self._insert_returning(
+            "INSERT INTO posts (campaign_id, opportunity_id, platform, target, status, triggered_by, url) VALUES (NULL,?,?,?,'success','manual',?) RETURNING *",
+            (opportunity_id, platform, target, url),
         )
 
     def update_post_status(self, post_id: int, status: str, url: str | None = None,

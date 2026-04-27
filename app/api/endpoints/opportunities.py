@@ -57,6 +57,10 @@ class DismissBody(BaseModel):
     note: str | None = None
 
 
+class MarkPostedBody(BaseModel):
+    url: str | None = None
+
+
 # ------------------------------------------------------------------ #
 # Routes
 # ------------------------------------------------------------------ #
@@ -129,14 +133,29 @@ async def approve_opportunity(opportunity_id: int):
 
 
 @router.post("/{opportunity_id}/mark-posted")
-async def mark_posted(opportunity_id: int, manual: bool = False):
-    """Record that a post was successfully made (auto or manual)."""
+async def mark_posted(opportunity_id: int, body: MarkPostedBody = MarkPostedBody(), manual: bool = False):
+    """Record that a post was successfully made (auto or manual).
+    When manual=True, also writes a row to the posts table for history tracking."""
+    opp = await asyncio.to_thread(_in_thread, lambda s: s.get_opportunity(opportunity_id))
+    if opp is None:
+        raise HTTPException(404, "Opportunity not found")
+
     status = "manual_posted" if manual else "posted"
     result = await asyncio.to_thread(
         _in_thread, lambda s: s.update_opportunity(opportunity_id, status=status)
     )
-    if result is None:
-        raise HTTPException(404, "Opportunity not found")
+
+    if manual:
+        await asyncio.to_thread(
+            _in_thread,
+            lambda s: s.log_manual_post(
+                opportunity_id=opportunity_id,
+                platform=opp["platform"],
+                target=opp["community"],
+                url=body.url,
+            ),
+        )
+
     return result
 
 

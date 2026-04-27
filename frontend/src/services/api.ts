@@ -64,7 +64,7 @@ export interface CampaignSub {
 
 export interface Post {
   id: number
-  campaign_id: number
+  campaign_id: number | null
   variant_id: number | null
   platform: string
   target: string
@@ -85,6 +85,7 @@ export interface SubRules {
   promo_allowed: number | null
   rule_warning: number
   notes: string | null
+  post_url: string | null
   last_checked: string | null
   updated_at: string
 }
@@ -95,6 +96,7 @@ export interface SubRulesUpsert {
   promo_allowed?: boolean | null
   rule_warning?: boolean
   notes?: string | null
+  post_url?: string | null
 }
 
 export type OpportunityStatus =
@@ -275,8 +277,8 @@ export const api = {
     approve: (id: number) =>
       http.post<ApproveResult>(`/opportunities/${id}/approve`).then(r => r.data),
 
-    markPosted: (id: number, manual = false) =>
-      http.post<Opportunity>(`/opportunities/${id}/mark-posted`, null, { params: { manual } }).then(r => r.data),
+    markPosted: (id: number, manual = false, url?: string | null) =>
+      http.post<Opportunity>(`/opportunities/${id}/mark-posted`, { url: url ?? null }, { params: { manual } }).then(r => r.data),
 
     dismiss: (id: number, note?: string) =>
       http.post<Opportunity>(`/opportunities/${id}/dismiss`, { note: note ?? null }).then(r => r.data),

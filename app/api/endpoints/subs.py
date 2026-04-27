@@ -25,6 +25,7 @@ class SubRulesUpsert(BaseModel):
     promo_allowed: bool | None = None    # None = unknown
     rule_warning: bool = False
     notes: str | None = None
+    post_url: str | None = None          # override link for Copy & Post (e.g. megathread)
 
 
 @router.get("")

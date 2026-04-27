@@ -35,7 +35,7 @@
               <span v-if="r.rule_warning" class="badge badge-warning">yes</span>
               <span v-else style="color: var(--color-text-muted);">—</span>
             </td>
-            <td data-label="Notes" style="color: var(--color-text-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <td data-label="Notes" style="color: var(--color-text-muted); max-width: 260px; white-space: normal; word-break: break-word;" :title="r.notes ?? ''">
               {{ r.notes ?? '—' }}
             </td>
             <td data-label="">
@@ -95,6 +95,10 @@
           </select>
         </div>
         <div class="form-group">
+          <label class="form-label">Post URL <span style="color: var(--color-text-muted)">(optional — overrides /submit, e.g. megathread link)</span></label>
+          <input class="form-input" v-model="form.post_url" placeholder="https://www.reddit.com/r/selfhosted/comments/..." />
+        </div>
+        <div class="form-group">
           <label class="form-label">Notes</label>
           <textarea class="form-textarea" v-model="form.notes" rows="2" placeholder="Any posting quirks..." />
         </div>
@@ -122,6 +126,7 @@ const form = reactive({
   flair_to_use: '',
   promo_allowed: null as boolean | null,
   rule_warning: false,
+  post_url: '',
   notes: '',
 })
 
@@ -138,6 +143,7 @@ function startEdit(r: SubRules) {
     flair_to_use: r.flair_to_use ?? '',
     promo_allowed: r.promo_allowed === null ? null : !!r.promo_allowed,
     rule_warning: !!r.rule_warning,
+    post_url: r.post_url ?? '',
     notes: r.notes ?? '',
   })
 }
@@ -145,7 +151,7 @@ function startEdit(r: SubRules) {
 function closeModal() {
   showAdd.value = false
   editing.value = null
-  Object.assign(form, { sub: '', platform: 'reddit', flair_required: false, flair_to_use: '', promo_allowed: null, rule_warning: false, notes: '' })
+  Object.assign(form, { sub: '', platform: 'reddit', flair_required: false, flair_to_use: '', promo_allowed: null, rule_warning: false, post_url: '', notes: '' })
 }
 
 async function save() {
@@ -156,6 +162,7 @@ async function save() {
     flair_to_use: form.flair_to_use || null,
     promo_allowed: form.promo_allowed,
     rule_warning: form.rule_warning,
+    post_url: form.post_url || null,
     notes: form.notes || null,
   }, platform)
   const idx = rules.value.findIndex(r => r.sub === sub && r.platform === platform)

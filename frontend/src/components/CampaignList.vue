@@ -30,8 +30,8 @@
               </router-link>
             </td>
             <td data-label="Product"><span class="badge badge-info">{{ c.product }}</span></td>
-            <td data-label="Schedule" class="text-mono text-sm text-muted">
-              {{ c.cron_schedule ?? '— manual' }}
+            <td data-label="Schedule" class="text-sm text-muted" :title="c.cron_schedule ?? undefined">
+              {{ humanizeCron(c.cron_schedule) }}
             </td>
             <td data-label="Status">
               <span :class="['badge', c.active ? 'badge-success' : 'badge-muted']">
@@ -90,6 +90,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useCampaignStore } from '@/stores/campaigns'
+import { humanizeCron } from '@/utils/cron'
 
 const store = useCampaignStore()
 const showCreate = ref(false)

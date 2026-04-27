@@ -24,9 +24,9 @@ from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 from playwright_stealth import Stealth
 
-# Load .env from project root (two levels up from this file)
+# Load .env from project root (magpie repo root, 3 levels up from this file)
 _HERE = Path(__file__).parent
-_PROJECT_ROOT = _HERE.parents[3]
+_PROJECT_ROOT = _HERE.parents[2]  # reddit/ → services/ → app/ → magpie/
 load_dotenv(_PROJECT_ROOT / ".env")
 
 REDDIT_USERNAME = os.getenv("REDDIT_USERNAME", "")
@@ -34,7 +34,10 @@ REDDIT_PASSWORD = os.getenv("REDDIT_PASSWORD", "")
 CHROME_BIN = os.getenv("CHROME_BIN", "/usr/bin/google-chrome")
 
 # Session file path from env (so the service layer can pass it via env var)
-SESSION_FILE = Path(os.getenv("REDDIT_SESSION_FILE", str(_HERE / "session.json")))
+SESSION_FILE = Path(os.getenv(
+    "REDDIT_SESSION_FILE",
+    str(Path.home() / ".local" / "share" / "magpie" / "session.json"),
+))
 
 LOGIN_URL = "https://www.reddit.com/login"
 SUBMIT_URL = "https://www.reddit.com/r/{sub}/submit?type=text"
@@ -187,13 +190,24 @@ def post(sub: str, title: str, body: str, flair: str | None = None, yes: bool = 
 
         time.sleep(0.5)
 
-        # Fill body (Lexical editor — click to focus, then type)
+        # Fill body — Reddit shows either a markdown textarea or a Lexical
+        # rich-text contenteditable depending on user/sub settings.
+        # Try markdown textarea first (visible in screenshot), fall back to Lexical.
         try:
-            body_el = page.locator('div[contenteditable="true"]').first
-            body_el.wait_for(state="visible", timeout=10_000)
-            body_el.click()
-            time.sleep(0.3)
-            page.keyboard.type(body, delay=2)
+            md_textarea = page.locator('textarea[placeholder="Body text*"]')
+            if md_textarea.count() > 0:
+                md_textarea.first.wait_for(state="visible", timeout=5_000)
+                md_textarea.first.click()
+                time.sleep(0.3)
+                md_textarea.first.fill(body)
+                print("  Body filled via markdown textarea")
+            else:
+                body_el = page.locator('div[contenteditable="true"]').first
+                body_el.wait_for(state="visible", timeout=10_000)
+                body_el.click()
+                time.sleep(0.3)
+                page.keyboard.type(body, delay=2)
+                print("  Body filled via rich text editor")
         except Exception as exc:
             print(f"  Warning: body fill failed ({exc})")
 
@@ -210,11 +224,26 @@ def post(sub: str, title: str, body: str, flair: str | None = None, yes: bool = 
             except Exception as exc:
                 print(f"  Warning: flair selection failed ({exc})")
 
-        # Submit
+        # Submit — try multiple selector strategies; Reddit's form markup varies
         try:
-            submit_btn = page.locator('button[type="submit"]').filter(has_text="Post")
-            submit_btn.wait_for(state="visible", timeout=10_000)
-            submit_btn.click()
+            # Scroll to bottom so button is in viewport
+            page.keyboard.press("End")
+            time.sleep(0.3)
+            for selector in [
+                'button[type="submit"]',
+                'button:has-text("Post")',
+                '[slot="submit-button"] button',
+                'button.bg-interactive-onbackground',
+            ]:
+                btn = page.locator(selector).last
+                if btn.count() > 0:
+                    btn.scroll_into_view_if_needed()
+                    btn.wait_for(state="visible", timeout=5_000)
+                    btn.click()
+                    print(f"  Clicked submit via {selector!r}")
+                    break
+            else:
+                print("  Warning: no submit button found with any selector")
         except Exception as exc:
             print(f"  Warning: submit button click failed ({exc})")
 

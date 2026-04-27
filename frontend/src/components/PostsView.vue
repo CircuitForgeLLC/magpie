@@ -55,7 +55,8 @@ onMounted(async () => {
   ])
 })
 
-function campaignName(id: number) {
+function campaignName(id: number | null) {
+  if (id === null) return 'manual'
   return campaignStore.campaigns.find(c => c.id === id)?.name ?? `#${id}`
 }
 

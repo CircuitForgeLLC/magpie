@@ -344,6 +344,26 @@ const TOOLS = [
     description: 'Check the scheduler status and see next scheduled run times for all campaigns.',
     inputSchema: { type: 'object', properties: {} },
   },
+  {
+    name: 'refresh_reddit_session',
+    description: 'Re-establish the Playwright Reddit session. Use target="bridge" to refresh the claude-bridge poster session, or "magpie" (default) for Magpie\'s own session. Takes ~30s.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', enum: ['magpie', 'bridge'], default: 'magpie', description: 'Which session to refresh: "magpie" or "bridge" (claude-bridge/reddit-poster)' },
+      },
+    },
+  },
+  {
+    name: 'reddit_session_status',
+    description: 'Check whether the Reddit Playwright session is valid and how old it is.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', enum: ['magpie', 'bridge'], default: 'magpie', description: 'Which session to check' },
+      },
+    },
+  },
 ];
 
 // ─── Dispatch ─────────────────────────────────────────────────────────────────
@@ -449,6 +469,15 @@ async function callTool(name, args) {
     case 'update_opportunity': {
       const { opportunity_id, ...fields } = args;
       return await api('PATCH', `/opportunities/${opportunity_id}`, fields);
+    }
+
+    case 'refresh_reddit_session': {
+      const target = args.target || 'magpie';
+      return await api('POST', `/reddit/refresh-session?target=${target}`);
+    }
+    case 'reddit_session_status': {
+      const target = args.target || 'magpie';
+      return await api('GET', `/reddit/session-status?target=${target}`);
     }
 
     default:

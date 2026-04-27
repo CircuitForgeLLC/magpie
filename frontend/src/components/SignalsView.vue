@@ -86,10 +86,10 @@
             <span style="font-weight: 500; font-size: 13px;">{{ r.name }}</span>
             <span v-if="r.sub" class="chip chip-sub" style="font-size: 10px;">{{ r.sub }}</span>
             <span v-if="r.label" class="chip" :class="`chip-label-${r.label}`" style="font-size: 10px;">{{ r.label }}</span>
-            <span v-if="!r.active" class="badge badge-muted" style="margin-left: auto; font-size: 10px;">paused</span>
-            <div v-else style="margin-left: auto; display: flex; gap: 4px;">
-              <button class="btn btn-ghost btn-xs" @click="toggleRule(r)">⏸</button>
-              <button class="btn btn-ghost btn-xs" style="color: var(--color-danger);" @click="deleteRule(r.id)">✕</button>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+              <span v-if="!r.active" class="badge badge-muted" style="font-size: 10px;">paused</span>
+              <button class="btn btn-ghost btn-xs" :title="r.active ? 'Pause' : 'Resume'" @click="toggleRule(r)">{{ r.active ? '⏸' : '▶' }}</button>
+              <button class="btn btn-ghost btn-xs" style="color: var(--color-danger);" title="Delete" @click="deleteRule(r.id)">✕</button>
             </div>
           </div>
           <div class="rule-keywords">

@@ -115,20 +115,48 @@
           <div class="handoff-actions">
             <button class="btn btn-secondary" @click="copyDraft">📋 Copy draft</button>
             <a :href="selected.thread_url" target="_blank" class="btn btn-secondary">🔗 Open thread</a>
-            <button class="btn btn-success" :disabled="saving" @click="markManualPosted">
+            <button v-if="!confirmingPosted" class="btn btn-success" @click="confirmingPosted = true">
               ✓ Mark as posted
             </button>
           </div>
           <div v-if="copied" class="copy-confirm">Copied to clipboard</div>
+          <div v-if="confirmingPosted" class="post-url-confirm">
+            <input
+              v-model="postedUrl"
+              class="input"
+              placeholder="Post URL (optional — paste link to your comment/post)"
+              @keydown.enter="markManualPosted"
+              @keydown.escape="confirmingPosted = false"
+            />
+            <div class="handoff-actions" style="margin-top: var(--spacing-xs);">
+              <button class="btn btn-success" :disabled="saving" @click="markManualPosted">Confirm</button>
+              <button class="btn btn-secondary" @click="confirmingPosted = false">Cancel</button>
+            </div>
+          </div>
         </section>
 
         <!-- Auto-post panel for approved Reddit -->
         <section v-if="selected.status === 'approved' && selected.platform === 'reddit'" class="handoff-panel">
           <h3 class="section-label">Ready to post</h3>
           <p class="handoff-note">Use trigger_sub_post from the Campaigns view, or mark as posted manually if you handled it.</p>
-          <button class="btn btn-success" :disabled="saving" @click="markManualPosted">
-            ✓ Mark as posted
-          </button>
+          <div v-if="!confirmingPosted">
+            <button class="btn btn-success" @click="confirmingPosted = true">
+              ✓ Mark as posted
+            </button>
+          </div>
+          <div v-if="confirmingPosted" class="post-url-confirm">
+            <input
+              v-model="postedUrl"
+              class="input"
+              placeholder="Post URL (optional)"
+              @keydown.enter="markManualPosted"
+              @keydown.escape="confirmingPosted = false"
+            />
+            <div class="handoff-actions" style="margin-top: var(--spacing-xs);">
+              <button class="btn btn-success" :disabled="saving" @click="markManualPosted">Confirm</button>
+              <button class="btn btn-secondary" @click="confirmingPosted = false">Cancel</button>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -203,6 +231,8 @@ const showAddModal = ref(false)
 const copied = ref(false)
 const filterStatus = ref<OpportunityStatus | ''>('')
 const loadError = ref<string | null>(null)
+const confirmingPosted = ref(false)
+const postedUrl = ref('')
 
 const editBody = ref('')
 const editTitle = ref('')
@@ -240,6 +270,8 @@ function select(opp: Opportunity) {
   selected.value = opp
   editBody.value = opp.draft_body
   editTitle.value = opp.draft_title ?? ''
+  confirmingPosted.value = false
+  postedUrl.value = ''
 }
 
 watch(selected, opp => {
@@ -293,8 +325,10 @@ async function markManualPosted() {
   if (!selected.value) return
   saving.value = true
   try {
-    const updated = await api.opportunities.markPosted(selected.value.id, true)
+    const updated = await api.opportunities.markPosted(selected.value.id, true, postedUrl.value || null)
     replace(updated)
+    confirmingPosted.value = false
+    postedUrl.value = ''
   } finally {
     saving.value = false
   }
@@ -482,6 +516,13 @@ onMounted(load)
 .copy-confirm {
   font-size: 0.8rem; color: var(--color-success);
   margin-top: var(--spacing-xs);
+}
+
+.post-url-confirm {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 
 /* Add form */

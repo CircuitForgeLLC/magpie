@@ -43,7 +43,13 @@
           </div>
           <div v-for="s in campaignSubs" :key="s.id" style="display: flex; align-items: center; gap: var(--spacing-sm); padding: 6px 0; border-bottom: 1px solid var(--color-border);">
             <span>r/{{ s.sub }}</span>
-            <button class="btn btn-ghost btn-sm" style="margin-left: auto; color: var(--color-danger);" @click="removeSub(s.sub)">✕</button>
+            <div style="margin-left: auto; display: flex; gap: 4px;">
+              <button class="btn btn-ghost btn-sm" @click="openCopyModal(s.sub)" title="Copy & open Reddit">Copy & Post</button>
+              <button class="btn btn-primary btn-sm" @click="triggerSub(s.sub)" :disabled="triggeringSub === s.sub" title="Auto-post via Playwright">
+                {{ triggeringSub === s.sub ? '...' : 'Run' }}
+              </button>
+              <button class="btn btn-ghost btn-sm" style="color: var(--color-danger);" @click="removeSub(s.sub)">✕</button>
+            </div>
           </div>
           <div v-if="campaignSubs.length === 0" class="empty-state" style="padding: var(--spacing-md);">No subs configured.</div>
         </div>
@@ -109,6 +115,55 @@
       </div>
     </div>
 
+    <!-- Copy & Open modal -->
+    <div v-if="copyModal.sub" class="modal-backdrop" @click.self="copyModal.sub = ''">
+      <div class="modal card" style="width: 620px; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-md);">
+          <h2 style="font-size: 16px; margin: 0;">Post to r/{{ copyModal.sub }}</h2>
+          <a :href="copyModal.url" target="_blank" class="btn btn-primary btn-sm">Open Reddit ↗</a>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <label class="form-label" style="margin: 0;">Title</label>
+            <button class="btn btn-ghost btn-sm" @click="copy(copyModal.title, 'title')">{{ copied === 'title' ? '✓ Copied' : 'Copy' }}</button>
+          </div>
+          <input class="form-input" :value="copyModal.title" readonly @click="($event.target as HTMLInputElement).select()" />
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <label class="form-label" style="margin: 0;">Body</label>
+            <button class="btn btn-ghost btn-sm" @click="copy(copyModal.body, 'body')">{{ copied === 'body' ? '✓ Copied' : 'Copy' }}</button>
+          </div>
+          <textarea class="form-textarea" :value="copyModal.body" readonly rows="14"
+            style="font-family: var(--font-mono); font-size: 12px; resize: vertical;"
+            @click="($event.target as HTMLTextAreaElement).select()" />
+        </div>
+
+        <!-- Sub-specific notes (e.g. AI disclosure requirement) -->
+        <div v-if="copyModal.notes" class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <label class="form-label" style="margin: 0;">Sub notes</label>
+            <button class="btn btn-ghost btn-sm" @click="copy(copyModal.notes, 'notes')">{{ copied === 'notes' ? '✓ Copied' : 'Copy' }}</button>
+          </div>
+          <textarea class="form-textarea" :value="copyModal.notes" readonly rows="3"
+            style="font-size: 12px; resize: vertical; color: var(--color-text-muted);"
+            @click="($event.target as HTMLTextAreaElement).select()" />
+        </div>
+
+        <div style="color: var(--color-text-muted); font-size: 12px; margin-bottom: var(--spacing-md);">
+          1. Copy title → paste into Reddit title field<br>
+          2. Copy body → paste into body<br>
+          3. Submit on Reddit
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-ghost" @click="copyModal.sub = ''">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Add sub modal -->
     <div v-if="showAddSub" class="modal-backdrop" @click.self="showAddSub = false">
       <div class="modal card" style="width: 360px;">
@@ -130,7 +185,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, type Campaign, type Variant, type CampaignSub, type Post } from '@/services/api'
+import { api, type Campaign, type Variant, type CampaignSub, type Post, type SubRules } from '@/services/api'
 
 const route = useRoute()
 const campaignId = Number(route.params.id)
@@ -139,25 +194,41 @@ const campaign = ref<Campaign | null>(null)
 const variants = ref<Variant[]>([])
 const campaignSubs = ref<CampaignSub[]>([])
 const recentPosts = ref<Post[]>([])
+const subRulesMap = ref<Record<string, SubRules>>({})
 const triggering = ref(false)
+const triggeringSub = ref<string | null>(null)
 const showAddVariant = ref(false)
 const showAddSub = ref(false)
+const copyModal = reactive({ sub: '', title: '', body: '', url: '', notes: '' })
+const copied = ref('')
 
 const variantForm = reactive({ sub_pattern: '*', title: '', body: '', flair: '', notes: '' })
 const subForm = reactive({ sub: '' })
 
 onMounted(async () => {
-  const [c, v, s, p] = await Promise.all([
+  const [c, v, s, p, allRules] = await Promise.all([
     api.campaigns.get(campaignId),
     api.variants.list(campaignId),
     api.subs.listForCampaign(campaignId),
     api.posts.list(campaignId, undefined, 20),
+    api.subs.listRules(),
   ])
   campaign.value = c
   variants.value = v
   campaignSubs.value = s
   recentPosts.value = p
+  subRulesMap.value = Object.fromEntries(allRules.map(r => [r.sub, r]))
 })
+
+async function triggerSub(sub: string) {
+  triggeringSub.value = sub
+  try {
+    await api.posts.trigger(campaignId, sub)
+    recentPosts.value = await api.posts.list(campaignId, undefined, 20)
+  } finally {
+    triggeringSub.value = null
+  }
+}
 
 async function triggerAll() {
   triggering.value = true
@@ -197,6 +268,32 @@ async function addSub() {
 async function removeSub(sub: string) {
   await api.subs.remove(campaignId, sub)
   campaignSubs.value = campaignSubs.value.filter(s => s.sub !== sub)
+}
+
+function resolveVariant(sub: string): Variant | null {
+  // Exact sub match first, then wildcard — mirrors backend resolve_variant logic
+  return (
+    variants.value.find(v => v.sub_pattern === sub) ??
+    variants.value.find(v => v.sub_pattern === '*') ??
+    null
+  )
+}
+
+function openCopyModal(sub: string) {
+  const v = resolveVariant(sub)
+  const rules = subRulesMap.value[sub]
+  copyModal.sub = sub
+  copyModal.title = v?.title ?? ''
+  copyModal.body = v?.body ?? ''
+  copyModal.url = rules?.post_url ?? `https://www.reddit.com/r/${sub}/submit?type=TEXT`
+  copyModal.notes = rules?.notes ?? ''
+  copied.value = ''
+}
+
+async function copy(text: string, which: string) {
+  await navigator.clipboard.writeText(text)
+  copied.value = which
+  setTimeout(() => { copied.value = '' }, 2000)
 }
 
 function formatDate(iso: string) {
