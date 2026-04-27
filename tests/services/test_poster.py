@@ -113,3 +113,52 @@ def test_run_post_unknown_type_skips(tmp_path):
 
     assert result["skipped"] is True
     assert "Unknown campaign type" in result["reason"]
+
+
+def test_occurrence_skip(tmp_path):
+    """When occurrence is 'first_sunday' and today is NOT the first Sunday, post is skipped."""
+    db = str(tmp_path / "test.db")
+    # 2026-04-19 is a Sunday but the 3rd Sunday of April 2026
+    mock_store = _make_store(
+        campaign_type="reddit_comment",
+        subs=[{"sub": "selfhosted", "active": 1, "occurrence": "first_sunday"}],
+    )
+    mock_strategy = MagicMock()
+    mock_strategy.supports_dupe_guard.return_value = False
+
+    with patch("app.services.poster.Store", return_value=mock_store):
+        with patch("app.services.poster.get_client", return_value=mock_strategy):
+            with patch("app.services.poster.date") as mock_date:
+                from datetime import date as real_date
+                mock_date.today.return_value = real_date(2026, 4, 19)
+                result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
+
+    assert result["skipped"] is True
+    assert "occurrence" in result["reason"]
+    mock_strategy.execute.assert_not_called()
+
+
+def test_occurrence_passes(tmp_path):
+    """When occurrence is 'first_sunday' and today IS the first Sunday, post proceeds."""
+    db = str(tmp_path / "test.db")
+    # 2026-05-03 is the first Sunday of May 2026
+    mock_store = _make_store(
+        campaign_type="reddit_comment",
+        subs=[{"sub": "selfhosted", "active": 1, "occurrence": "first_sunday"}],
+    )
+    mock_result = MagicMock()
+    mock_result.url = "https://reddit.com/r/selfhosted/comments/abc/"
+
+    mock_strategy = MagicMock()
+    mock_strategy.supports_dupe_guard.return_value = False
+    mock_strategy.execute.return_value = mock_result
+
+    with patch("app.services.poster.Store", return_value=mock_store):
+        with patch("app.services.poster.get_client", return_value=mock_strategy):
+            with patch("app.services.poster.date") as mock_date:
+                from datetime import date as real_date
+                mock_date.today.return_value = real_date(2026, 5, 3)
+                result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
+
+    assert result.get("skipped") is not True
+    mock_strategy.execute.assert_called_once()

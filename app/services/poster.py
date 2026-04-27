@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import date
 from pathlib import Path
 
 from app.core.config import get_settings
 from app.db.store import Store
 from app.services.platforms import get_client
+from app.services.platforms.reddit_comment import is_nth_weekday, parse_occurrence
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,18 @@ def _run_post(db_path: str, campaign_id: int, target: str,
         # Fetch the campaign_subs row for this target (used for extra + occurrence)
         all_subs = store.list_campaign_subs(campaign_id)
         sub_row = next((s for s in all_subs if s["sub"] == target), {})
+
+        # Occurrence check — skip if not the right week of the month
+        occurrence_str = (sub_row or {}).get("occurrence")
+        parsed = parse_occurrence(occurrence_str)
+        if parsed is not None:
+            weekday, n = parsed
+            if not is_nth_weekday(date.today(), weekday, n):
+                logger.info(
+                    "Skipping %s / %s — not occurrence %s today",
+                    campaign_id, target, occurrence_str,
+                )
+                return {"skipped": True, "reason": f"occurrence {occurrence_str} not today"}
 
         # Dupe guard (opt-out allowed per strategy)
         if strategy.supports_dupe_guard() and store.already_posted_this_week(campaign_id, target):
