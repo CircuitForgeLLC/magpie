@@ -134,8 +134,8 @@ class RedditCommentStrategy(PostingStrategy):
         client = RedditClient(session_file=session_file)
         comment_url = client.comment(thread_id=thread_id, body=body)
 
-        # Reddit comment() may return empty URL; reconstruct from thread_id
-        if not comment_url:
+        # Reddit comment() may return bare domain or empty; reconstruct from thread_id
+        if not comment_url or comment_url.rstrip("/") in ("https://reddit.com", "https://www.reddit.com"):
             comment_url = f"https://www.reddit.com/r/{target}/comments/{thread_id}/"
 
         return PostResult(url=comment_url, metadata={"thread_id": thread_id})
