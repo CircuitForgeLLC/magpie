@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, timedelta
 
 import httpx
@@ -43,3 +44,39 @@ def parse_occurrence(occurrence: str | None) -> tuple[int, int] | None:
     if ordinal not in _ORDINAL_MAP or weekday_name not in _WEEKDAY_MAP:
         raise ValueError(f"Unrecognised occurrence: {occurrence!r}")
     return _WEEKDAY_MAP[weekday_name], _ORDINAL_MAP[ordinal]
+
+
+def _extract_thread_id_from_url(url: str) -> str:
+    """Extract a Reddit post ID from a full Reddit URL.
+
+    Expects URLs of the form:
+        https://www.reddit.com/r/<sub>/comments/<id>/<title>/
+    Raises ValueError if the ID cannot be found.
+    """
+    match = re.search(r"/comments/([a-z0-9]+)/", url)
+    if not match:
+        raise ValueError(f"Cannot extract thread id from {url!r}")
+    return match.group(1)
+
+
+def _find_sticky(
+    sub: str,
+    title_pattern: str,
+    session_file: str | None = None,
+) -> str | None:
+    """Search the hot listing of a subreddit for a post matching title_pattern.
+
+    Uses the Reddit public JSON API (no auth required).
+    Returns the post ID (e.g. "abc123") of the first match, or None.
+    """
+    url = f"https://www.reddit.com/r/{sub}/hot.json?limit=10"
+    response = httpx.get(url, headers={"User-Agent": "magpie/1.0"})
+    payload = response.json()
+    children = payload.get("data", {}).get("children", [])
+    pattern_lower = title_pattern.lower()
+    for child in children:
+        post = child.get("data", {})
+        title = post.get("title", "")
+        if pattern_lower in title.lower():
+            return post.get("id")
+    return None
