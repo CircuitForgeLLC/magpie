@@ -97,6 +97,27 @@ class Store:
             (name, product, platform, cron_schedule, notes, type),
         )
 
+    def get_or_create_campaign(
+        self,
+        name: str,
+        product: str,
+        platform: str = "reddit",
+        type: str = "reddit_post",
+        cron_schedule: str | None = None,
+    ) -> dict:
+        existing = self._fetchone(
+            "SELECT * FROM campaigns WHERE name = ? AND product = ?", (name, product)
+        )
+        if existing:
+            return dict(existing)
+        return self.create_campaign(
+            name=name,
+            product=product,
+            platform=platform,
+            type=type,
+            cron_schedule=cron_schedule,
+        )
+
     def update_campaign(self, campaign_id: int, **fields) -> dict | None:
         allowed = {"name", "product", "cron_schedule", "active", "notes"}
         updates = {k: v for k, v in fields.items() if k in allowed}
@@ -152,6 +173,31 @@ class Store:
             (campaign_id, sub_pattern, title, body, flair, notes),
         )
 
+    def upsert_variant(
+        self,
+        campaign_id: int,
+        sub_pattern: str,
+        title: str,
+        body: str,
+        flair: str | None = None,
+    ) -> dict:
+        existing = self._fetchone(
+            "SELECT * FROM campaign_variants WHERE campaign_id = ? AND sub_pattern = ?",
+            (campaign_id, sub_pattern),
+        )
+        if existing:
+            self.conn.execute(
+                "UPDATE campaign_variants SET title=?, body=?, flair=? WHERE id=?",
+                (title, body, flair, existing["id"]),
+            )
+            self.conn.commit()
+            return self._fetchone("SELECT * FROM campaign_variants WHERE id=?", (existing["id"],))
+        return self._insert_returning(
+            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair)"
+            " VALUES (?,?,?,?,?) RETURNING *",
+            (campaign_id, sub_pattern, title, body, flair),
+        )
+
     def update_variant(self, variant_id: int, **fields) -> dict | None:
         allowed = {"sub_pattern", "title", "body", "flair", "notes"}
         updates = {k: v for k, v in fields.items() if k in allowed}
@@ -185,6 +231,32 @@ class Store:
         return self._insert_returning(
             "INSERT OR REPLACE INTO campaign_subs (campaign_id, sub, sort_order) VALUES (?,?,?) RETURNING *",
             (campaign_id, sub, sort_order),
+        )
+
+    def upsert_campaign_sub(
+        self,
+        campaign_id: int,
+        sub: str,
+        sort_order: int = 0,
+        thread_title_pattern: str | None = None,
+        thread_url_override: str | None = None,
+        occurrence: str | None = None,
+    ) -> dict:
+        self.conn.execute(
+            """INSERT INTO campaign_subs
+                   (campaign_id, sub, sort_order, thread_title_pattern, thread_url_override, occurrence)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(campaign_id, sub) DO UPDATE SET
+                   sort_order            = excluded.sort_order,
+                   thread_title_pattern  = excluded.thread_title_pattern,
+                   thread_url_override   = excluded.thread_url_override,
+                   occurrence            = excluded.occurrence""",
+            (campaign_id, sub, sort_order, thread_title_pattern, thread_url_override, occurrence),
+        )
+        self.conn.commit()
+        return self._fetchone(
+            "SELECT * FROM campaign_subs WHERE campaign_id = ? AND sub = ?",
+            (campaign_id, sub),
         )
 
     def remove_campaign_sub(self, campaign_id: int, sub: str) -> bool:

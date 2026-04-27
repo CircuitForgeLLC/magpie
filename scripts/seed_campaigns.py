@@ -342,6 +342,73 @@ def seed(store: Store) -> None:
             store.create_variant(campaign_id=cid, **v)
             print(f"       variant: {v['sub_pattern']!r}")
 
+    # --- r/Flipping Sunday self-promo (Snipe) ---
+    flipping_campaign = store.get_or_create_campaign(
+        name="Snipe | Sunday self-promo — r/Flipping",
+        product="snipe",
+        platform="reddit",
+        type="reddit_comment",
+        cron_schedule="0 16 * * 0",  # every Sunday 16:00 UTC
+    )
+    flipping_status = "skip" if flipping_campaign["name"] in existing_names else "+"
+    print(f"  [{flipping_status}] campaign {flipping_campaign['id']}: {flipping_campaign['name']!r}")
+    store.upsert_campaign_sub(
+        campaign_id=flipping_campaign["id"],
+        sub="Flipping",
+        sort_order=0,
+        thread_title_pattern="Weekly Self-Promotion",
+        occurrence="every",
+    )
+    print("       sub: r/Flipping (thread_title_pattern='Weekly Self-Promotion', occurrence='every')")
+    store.upsert_variant(
+        campaign_id=flipping_campaign["id"],
+        sub_pattern="*",
+        title="",
+        body=(
+            "Working on evaluating auction listings? I built **Snipe** — "
+            "a trust-scoring tool for eBay and estate auction platforms. "
+            "It checks seller history, flags marketing photos, and scores "
+            "listings before you bid.\n\n"
+            "Still in beta, free to try: https://circuitforge.tech\n\n"
+            "Happy to answer questions about how it works."
+        ),
+    )
+    print("       variant: '*'")
+
+    # --- r/cscareerquestions first-Sunday megathread (Peregrine) ---
+    cscq_campaign = store.get_or_create_campaign(
+        name="Peregrine | First-Sunday megathread — r/cscareerquestions",
+        product="peregrine",
+        platform="reddit",
+        type="reddit_comment",
+        cron_schedule="0 16 * * 0",  # every Sunday 16:00 UTC; occurrence gates to first_sunday
+    )
+    cscq_status = "skip" if cscq_campaign["name"] in existing_names else "+"
+    print(f"  [{cscq_status}] campaign {cscq_campaign['id']}: {cscq_campaign['name']!r}")
+    store.upsert_campaign_sub(
+        campaign_id=cscq_campaign["id"],
+        sub="cscareerquestions",
+        sort_order=0,
+        thread_title_pattern="Monthly Resume",
+        occurrence="first_sunday",
+    )
+    print("       sub: r/cscareerquestions (thread_title_pattern='Monthly Resume', occurrence='first_sunday')")
+    store.upsert_variant(
+        campaign_id=cscq_campaign["id"],
+        sub_pattern="*",
+        title="",
+        body=(
+            "I'm building **Peregrine** — a local-first job search assistant "
+            "for neurodivergent and adaptive-needs folks. It helps with "
+            "cover letters, interview prep, and tracking applications without "
+            "your data leaving your machine.\n\n"
+            "Free tier available: https://circuitforge.tech/peregrine\n\n"
+            "Built by someone who's been through the grind — genuinely trying "
+            "to make this less awful."
+        ),
+    )
+    print("       variant: '*'")
+
     print()
     print("Seeding sub rules...")
     for rule in SUB_RULES:
