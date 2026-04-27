@@ -39,8 +39,11 @@ def _run_post(db_path: str, campaign_id: int, target: str,
         sub_row = next((s for s in all_subs if s["sub"] == target), {})
 
         # Occurrence check — skip if not the right week of the month
-        occurrence_str = (sub_row or {}).get("occurrence")
-        parsed = parse_occurrence(occurrence_str)
+        occurrence_str = sub_row.get("occurrence")
+        try:
+            parsed = parse_occurrence(occurrence_str)
+        except ValueError as exc:
+            return {"skipped": True, "reason": f"invalid occurrence {occurrence_str!r}: {exc}"}
         if parsed is not None:
             weekday, n = parsed
             if not is_nth_weekday(date.today(), weekday, n):

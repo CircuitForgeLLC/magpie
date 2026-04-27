@@ -160,5 +160,80 @@ def test_occurrence_passes(tmp_path):
                 mock_date.today.return_value = real_date(2026, 5, 3)
                 result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
 
-    assert result.get("skipped") is not True
+    assert result.get("status") == "success"
     mock_strategy.execute.assert_called_once()
+
+
+def test_occurrence_every_passes_through(tmp_path):
+    """occurrence='every' means post every time — no filtering, execute is called."""
+    db = str(tmp_path / "test.db")
+    # parse_occurrence("every") returns None → no filtering → execute runs
+    mock_store = _make_store(
+        campaign_type="reddit_comment",
+        subs=[{"sub": "selfhosted", "active": 1, "occurrence": "every"}],
+    )
+    mock_result = MagicMock()
+    mock_result.url = "https://reddit.com/r/selfhosted/comments/abc/"
+
+    mock_strategy = MagicMock()
+    mock_strategy.supports_dupe_guard.return_value = False
+    mock_strategy.execute.return_value = mock_result
+
+    with patch("app.services.poster.Store", return_value=mock_store):
+        with patch("app.services.poster.get_client", return_value=mock_strategy):
+            with patch("app.services.poster.date") as mock_date:
+                from datetime import date as real_date
+                mock_date.today.return_value = real_date(2026, 5, 3)
+                result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
+
+    assert result.get("status") == "success"
+    mock_strategy.execute.assert_called_once()
+
+
+def test_occurrence_none_sub_row_key_passes_through(tmp_path):
+    """Sub row exists but has no occurrence key — should post normally."""
+    db = str(tmp_path / "test.db")
+    # sub_row has no "occurrence" key → .get() returns None → parse_occurrence(None) returns None
+    mock_store = _make_store(
+        campaign_type="reddit_comment",
+        subs=[{"sub": "selfhosted", "active": 1}],
+    )
+    mock_result = MagicMock()
+    mock_result.url = "https://reddit.com/r/selfhosted/comments/abc/"
+
+    mock_strategy = MagicMock()
+    mock_strategy.supports_dupe_guard.return_value = False
+    mock_strategy.execute.return_value = mock_result
+
+    with patch("app.services.poster.Store", return_value=mock_store):
+        with patch("app.services.poster.get_client", return_value=mock_strategy):
+            with patch("app.services.poster.date") as mock_date:
+                from datetime import date as real_date
+                mock_date.today.return_value = real_date(2026, 5, 3)
+                result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
+
+    assert result.get("status") == "success"
+    mock_strategy.execute.assert_called_once()
+
+
+def test_occurrence_invalid_string_skips(tmp_path):
+    """Malformed occurrence string results in skipped=True, not a crash."""
+    db = str(tmp_path / "test.db")
+    # "weekly" is not a valid occurrence string — parse_occurrence raises ValueError
+    mock_store = _make_store(
+        campaign_type="reddit_comment",
+        subs=[{"sub": "selfhosted", "active": 1, "occurrence": "weekly"}],
+    )
+    mock_strategy = MagicMock()
+    mock_strategy.supports_dupe_guard.return_value = False
+
+    with patch("app.services.poster.Store", return_value=mock_store):
+        with patch("app.services.poster.get_client", return_value=mock_strategy):
+            with patch("app.services.poster.date") as mock_date:
+                from datetime import date as real_date
+                mock_date.today.return_value = real_date(2026, 5, 3)
+                result = _run_post(db, campaign_id=1, target="selfhosted", triggered_by="scheduler")
+
+    assert result.get("skipped") is True
+    assert "invalid occurrence" in result.get("reason", "")
+    mock_strategy.execute.assert_not_called()
