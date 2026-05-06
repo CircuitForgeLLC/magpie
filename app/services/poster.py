@@ -53,6 +53,17 @@ def _run_post(db_path: str, campaign_id: int, target: str,
                 )
                 return {"skipped": True, "reason": f"occurrence {occurrence_str} not today"}
 
+        # Per-sub post cap (max_posts=None means unlimited)
+        max_posts = sub_row.get("max_posts")
+        if max_posts is not None:
+            count = store.successful_post_count(campaign_id, target)
+            if count >= max_posts:
+                logger.info(
+                    "Skipping %s / %s — reached max_posts=%d (posted %d time(s))",
+                    campaign_id, target, max_posts, count,
+                )
+                return {"skipped": True, "reason": f"max_posts={max_posts} reached for {target!r}"}
+
         # Dupe guard (opt-out allowed per strategy)
         if strategy.supports_dupe_guard() and store.already_posted_this_week(campaign_id, target):
             return {"skipped": True, "reason": f"already posted to {target!r} this week"}

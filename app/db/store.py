@@ -319,6 +319,14 @@ class Store:
         )
         return row is not None
 
+    def successful_post_count(self, campaign_id: int, target: str) -> int:
+        """Return lifetime count of successful posts for this campaign+target pair."""
+        row = self._fetchone(
+            "SELECT COUNT(*) AS n FROM posts WHERE campaign_id = ? AND target = ? AND status = 'success'",
+            (campaign_id, target),
+        )
+        return row["n"] if row else 0
+
     # ------------------------------------------------------------------ #
     # Sub rules
     # ------------------------------------------------------------------ #
