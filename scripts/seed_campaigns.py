@@ -299,7 +299,7 @@ What part of the process drains you most? I'm building specifically for this com
 
 SUB_RULES = [
     {"sub": "selfhosted",      "promo_allowed": True,  "flair_required": False, "rule_warning": False, "notes": "Promo OK with context. Engages well with self-hosted + local inference framing."},
-    {"sub": "solarpunk",       "promo_allowed": True,  "flair_required": True,  "flair_to_use": "Action / DIY / Activism", "rule_warning": False, "notes": "Flair required. Use coordinate-click for Add button (shadow DOM)."},
+    {"sub": "solarpunk",       "promo_allowed": False, "flair_required": True,  "flair_to_use": "Action / DIY / Activism", "rule_warning": False, "notes": "Post removed by mods 2026-04-23 (est.) — suspected project age issue. No explanation given. Re-evaluate after project has more post history."},
     {"sub": "opensource",      "promo_allowed": True,  "flair_required": True,  "flair_to_use": "Promotional", "rule_warning": True,  "notes": "Rule-warning dialog appears after Post click. wait_for(visible) + Submit without editing."},
     {"sub": "AuDHD",           "promo_allowed": True,  "flair_required": False, "rule_warning": False, "notes": "No hard promo ban. Personally-relevant content qualifies."},
     {"sub": "privacytoolsIO",  "promo_allowed": True,  "flair_required": False, "rule_warning": False, "notes": "Self-promo OK with privacy context. No flair needed."},
@@ -408,6 +408,44 @@ def seed(store: Store) -> None:
         ),
     )
     print("       variant: '*'")
+
+    print()
+    print("Seeding blog campaigns...")
+
+    import json as _json
+
+    blog_campaign = store.get_or_create_campaign(
+        name="CircuitForge | Weekly product update — blog",
+        product="circuitforge",
+        platform="blog",
+        type="blog_post",
+        cron_schedule=None,  # manual trigger only to start
+    )
+    print(f"  campaign: {blog_campaign['name']!r} (id={blog_campaign['id']})")
+    store.upsert_campaign_sub(
+        campaign_id=blog_campaign["id"],
+        sub="blog/main",
+        sort_order=0,
+    )
+    print("    sub: 'blog/main'")
+    store.upsert_variant(
+        campaign_id=blog_campaign["id"],
+        sub_pattern="*",
+        title="[DRAFT] Weekly CircuitForge Update",
+        body=(
+            "# What we shipped this week\n\n"
+            "_Replace this with actual update content._\n\n"
+            "## Products\n\n"
+            "- **Peregrine:** ...\n"
+            "- **Kiwi:** ...\n"
+            "- **Snipe:** ...\n\n"
+            "## Coming up\n\n"
+            "..."
+        ),
+        tags=_json.dumps(["updates", "circuitforge"]),
+        seo_description="Weekly product update from CircuitForge.",
+    )
+    print("    variant: '*'")
 
     print()
     print("Seeding sub rules...")

@@ -180,6 +180,9 @@ class Store:
         title: str,
         body: str,
         flair: str | None = None,
+        slug: str | None = None,
+        tags: str | None = None,
+        seo_description: str | None = None,
     ) -> dict:
         existing = self._fetchone(
             "SELECT * FROM campaign_variants WHERE campaign_id = ? AND sub_pattern = ?",
@@ -187,15 +190,15 @@ class Store:
         )
         if existing:
             self.conn.execute(
-                "UPDATE campaign_variants SET title=?, body=?, flair=? WHERE id=?",
-                (title, body, flair, existing["id"]),
+                "UPDATE campaign_variants SET title=?, body=?, flair=?, slug=?, tags=?, seo_description=? WHERE id=?",
+                (title, body, flair, slug, tags, seo_description, existing["id"]),
             )
             self.conn.commit()
             return self._fetchone("SELECT * FROM campaign_variants WHERE id=?", (existing["id"],))
         return self._insert_returning(
-            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair)"
-            " VALUES (?,?,?,?,?) RETURNING *",
-            (campaign_id, sub_pattern, title, body, flair),
+            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description)"
+            " VALUES (?,?,?,?,?,?,?,?) RETURNING *",
+            (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description),
         )
 
     def update_variant(self, variant_id: int, **fields) -> dict | None:
