@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -10,6 +11,7 @@ from app.core.config import get_settings
 from app.db.store import Store
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+logger = logging.getLogger(__name__)
 
 VALID_STATUSES = {"pending_review", "approved", "posted", "manual_posted", "dismissed"}
 
@@ -74,10 +76,13 @@ async def list_opportunities(status: str | None = None):
 
 @router.post("", status_code=201)
 async def create_opportunity(body: OpportunityCreate):
-    return await asyncio.to_thread(
+    logger.info("Creating opportunity: platform=%s community=%s", body.platform, body.community)
+    result = await asyncio.to_thread(
         _in_thread,
         lambda s: s.create_opportunity(**body.model_dump()),
     )
+    logger.info("Opportunity created: id=%s", result.get("id"))
+    return result
 
 
 @router.get("/{opportunity_id}")
@@ -105,6 +110,7 @@ async def update_opportunity(opportunity_id: int, body: OpportunityUpdate):
 async def approve_opportunity(opportunity_id: int):
     """Mark as approved. For Reddit opportunities, returns auto-post instructions.
     For other platforms, returns a manual handoff payload."""
+    logger.info("Approving opportunity id=%s", opportunity_id)
     opp = await asyncio.to_thread(_in_thread, lambda s: s.get_opportunity(opportunity_id))
     if opp is None:
         raise HTTPException(404, "Opportunity not found")
@@ -136,6 +142,7 @@ async def approve_opportunity(opportunity_id: int):
 async def mark_posted(opportunity_id: int, body: MarkPostedBody = MarkPostedBody(), manual: bool = False):
     """Record that a post was successfully made (auto or manual).
     When manual=True, also writes a row to the posts table for history tracking."""
+    logger.info("mark-posted: id=%s manual=%s url=%r", opportunity_id, manual, body.url)
     opp = await asyncio.to_thread(_in_thread, lambda s: s.get_opportunity(opportunity_id))
     if opp is None:
         raise HTTPException(404, "Opportunity not found")
@@ -161,6 +168,7 @@ async def mark_posted(opportunity_id: int, body: MarkPostedBody = MarkPostedBody
 
 @router.post("/{opportunity_id}/dismiss")
 async def dismiss_opportunity(opportunity_id: int, body: DismissBody):
+    logger.info("Dismissing opportunity id=%s note=%r", opportunity_id, body.note)
     result = await asyncio.to_thread(
         _in_thread, lambda s: s.dismiss_opportunity(opportunity_id, body.note)
     )

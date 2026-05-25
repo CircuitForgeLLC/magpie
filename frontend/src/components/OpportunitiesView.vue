@@ -222,6 +222,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, type Opportunity, type OpportunityStatus } from '../services/api'
+import { useToast } from '../composables/useToast'
+
+const toast = useToast()
 
 const opportunities = ref<Opportunity[]>([])
 const loading = ref(false)
@@ -290,6 +293,8 @@ async function saveDraft() {
       draft_title: editTitle.value || undefined,
     })
     replace(updated)
+  } catch (e: unknown) {
+    toast.error(`Failed to save draft: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     saving.value = false
   }
@@ -305,6 +310,8 @@ async function approve() {
     }
     const result = await api.opportunities.approve(selected.value.id)
     replace(result.opportunity)
+  } catch (e: unknown) {
+    toast.error(`Failed to approve: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     saving.value = false
   }
@@ -316,6 +323,8 @@ async function dismiss() {
   try {
     const updated = await api.opportunities.dismiss(selected.value.id)
     replace(updated)
+  } catch (e: unknown) {
+    toast.error(`Failed to dismiss: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     saving.value = false
   }
@@ -329,6 +338,8 @@ async function markManualPosted() {
     replace(updated)
     confirmingPosted.value = false
     postedUrl.value = ''
+  } catch (e: unknown) {
+    toast.error(`Failed to mark as posted: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     saving.value = false
   }
@@ -336,9 +347,13 @@ async function markManualPosted() {
 
 async function copyDraft() {
   if (!selected.value) return
-  await navigator.clipboard.writeText(selected.value.draft_body)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  try {
+    await navigator.clipboard.writeText(selected.value.draft_body)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    toast.error('Could not copy to clipboard')
+  }
 }
 
 async function createOpp() {
@@ -353,6 +368,8 @@ async function createOpp() {
     opportunities.value.unshift(created)
     showAddModal.value = false
     newOpp.value = { platform: 'reddit', community: '', thread_url: '', thread_title: '', signal_reason: '', product: '', draft_body: '', post_type: 'reply_to_thread' }
+  } catch (e: unknown) {
+    toast.error(`Failed to create opportunity: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     saving.value = false
   }

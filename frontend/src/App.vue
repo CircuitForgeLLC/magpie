@@ -22,8 +22,12 @@
 
     <!-- Main -->
     <main class="main-content">
+      <StatsBar />
       <router-view />
     </main>
+
+    <!-- Global toast notifications -->
+    <ToastList />
 
     <!-- Bottom Nav (mobile <768px) -->
     <nav class="bottom-nav" aria-label="Main navigation">
@@ -50,3 +54,8 @@
     </nav>
   </div>
 </template>
+
+<script setup lang="ts">
+import ToastList from './components/ToastList.vue'
+import StatsBar from './components/StatsBar.vue'
+</script>

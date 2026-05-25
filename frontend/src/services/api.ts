@@ -311,4 +311,6 @@ export const api = {
     updateStatus: (id: number, status: SignalStatus, notes?: string) =>
       http.patch<Signal>(`/signals/${id}/status`, { status, notes: notes ?? null }).then(r => r.data),
   },
+
+  stats: () => http.get('/stats').then(r => r.data),
 }

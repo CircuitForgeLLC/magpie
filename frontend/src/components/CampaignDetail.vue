@@ -186,7 +186,9 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, type Campaign, type Variant, type CampaignSub, type Post, type SubRules } from '@/services/api'
+import { useToast } from '../composables/useToast'
 
+const toast = useToast()
 const route = useRoute()
 const campaignId = Number(route.params.id)
 
@@ -206,18 +208,22 @@ const variantForm = reactive({ sub_pattern: '*', title: '', body: '', flair: '',
 const subForm = reactive({ sub: '' })
 
 onMounted(async () => {
-  const [c, v, s, p, allRules] = await Promise.all([
-    api.campaigns.get(campaignId),
-    api.variants.list(campaignId),
-    api.subs.listForCampaign(campaignId),
-    api.posts.list(campaignId, undefined, 20),
-    api.subs.listRules(),
-  ])
-  campaign.value = c
-  variants.value = v
-  campaignSubs.value = s
-  recentPosts.value = p
-  subRulesMap.value = Object.fromEntries(allRules.map(r => [r.sub, r]))
+  try {
+    const [c, v, s, p, allRules] = await Promise.all([
+      api.campaigns.get(campaignId),
+      api.variants.list(campaignId),
+      api.subs.listForCampaign(campaignId),
+      api.posts.list(campaignId, undefined, 20),
+      api.subs.listRules(),
+    ])
+    campaign.value = c
+    variants.value = v
+    campaignSubs.value = s
+    recentPosts.value = p
+    subRulesMap.value = Object.fromEntries(allRules.map(r => [r.sub, r]))
+  } catch (e: unknown) {
+    toast.error(`Failed to load campaign: ${e instanceof Error ? e.message : 'Unknown error'}`)
+  }
 })
 
 async function triggerSub(sub: string) {
@@ -225,6 +231,8 @@ async function triggerSub(sub: string) {
   try {
     await api.posts.trigger(campaignId, sub)
     recentPosts.value = await api.posts.list(campaignId, undefined, 20)
+  } catch (e: unknown) {
+    toast.error(`Trigger failed for ${sub}: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     triggeringSub.value = null
   }
@@ -235,39 +243,57 @@ async function triggerAll() {
   try {
     await api.campaigns.trigger(campaignId)
     recentPosts.value = await api.posts.list(campaignId, undefined, 20)
+  } catch (e: unknown) {
+    toast.error(`Trigger all failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
   } finally {
     triggering.value = false
   }
 }
 
 async function addVariant() {
-  const v = await api.variants.create(campaignId, {
-    sub_pattern: variantForm.sub_pattern || '*',
-    title: variantForm.title,
-    body: variantForm.body,
-    flair: variantForm.flair || null,
-    notes: variantForm.notes || null,
-  })
-  variants.value = [...variants.value, v]
-  showAddVariant.value = false
-  Object.assign(variantForm, { sub_pattern: '*', title: '', body: '', flair: '', notes: '' })
+  try {
+    const v = await api.variants.create(campaignId, {
+      sub_pattern: variantForm.sub_pattern || '*',
+      title: variantForm.title,
+      body: variantForm.body,
+      flair: variantForm.flair || null,
+      notes: variantForm.notes || null,
+    })
+    variants.value = [...variants.value, v]
+    showAddVariant.value = false
+    Object.assign(variantForm, { sub_pattern: '*', title: '', body: '', flair: '', notes: '' })
+  } catch (e: unknown) {
+    toast.error(`Failed to add variant: ${e instanceof Error ? e.message : 'Unknown error'}`)
+  }
 }
 
 async function deleteVariant(id: number) {
-  await api.variants.delete(campaignId, id)
-  variants.value = variants.value.filter(v => v.id !== id)
+  try {
+    await api.variants.delete(campaignId, id)
+    variants.value = variants.value.filter(v => v.id !== id)
+  } catch (e: unknown) {
+    toast.error(`Failed to delete variant: ${e instanceof Error ? e.message : 'Unknown error'}`)
+  }
 }
 
 async function addSub() {
-  const s = await api.subs.add(campaignId, subForm.sub)
-  campaignSubs.value = [...campaignSubs.value, s]
-  showAddSub.value = false
-  subForm.sub = ''
+  try {
+    const s = await api.subs.add(campaignId, subForm.sub)
+    campaignSubs.value = [...campaignSubs.value, s]
+    showAddSub.value = false
+    subForm.sub = ''
+  } catch (e: unknown) {
+    toast.error(`Failed to add sub: ${e instanceof Error ? e.message : 'Unknown error'}`)
+  }
 }
 
 async function removeSub(sub: string) {
-  await api.subs.remove(campaignId, sub)
-  campaignSubs.value = campaignSubs.value.filter(s => s.sub !== sub)
+  try {
+    await api.subs.remove(campaignId, sub)
+    campaignSubs.value = campaignSubs.value.filter(s => s.sub !== sub)
+  } catch (e: unknown) {
+    toast.error(`Failed to remove ${sub}: ${e instanceof Error ? e.message : 'Unknown error'}`)
+  }
 }
 
 function resolveVariant(sub: string): Variant | null {

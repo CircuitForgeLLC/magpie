@@ -3,17 +3,20 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routes import register_routes
 from app.core.config import get_settings
+from app.core.logging_config import configure_logging
 from app.db.store import Store
 from app.services.scheduler import (
     start_scheduler, stop_scheduler, sync_all_campaigns,
     start_scraper_job,
 )
 
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +70,19 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     register_routes(app)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(
+            "Unhandled exception on %s %s",
+            request.method,
+            request.url.path,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+
     return app
 
 
