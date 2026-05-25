@@ -310,11 +310,16 @@ class Store:
         self.conn.commit()
         return self._fetchone("SELECT * FROM posts WHERE id = ?", (post_id,))
 
-    def already_posted_this_week(self, campaign_id: int, target: str) -> bool:
-        """Return True if a successful post to this sub exists in the past 7 days."""
+    def already_posted_this_week(self, campaign_id: int, target: str,
+                                  days: int = 30) -> bool:
+        """Return True if a successful post to this sub exists within the past `days` days.
+
+        Default is 30 days — conservative enough to catch bi-weekly and monthly
+        campaigns. Weekly campaigns should use max_posts instead of relying on this guard.
+        """
         row = self._fetchone(
             "SELECT id FROM posts WHERE campaign_id = ? AND target = ? AND status = 'success'"
-            " AND posted_at >= datetime('now', '-7 days')",
+            f" AND posted_at >= datetime('now', '-{days} days')",
             (campaign_id, target),
         )
         return row is not None
