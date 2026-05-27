@@ -85,7 +85,7 @@ _start_web() {
     if [[ -f "frontend/dist/index.html" ]]; then
         info "Starting web on :${WEB_PORT} (static dist — production mode)..."
         conda run --no-capture-output -n "$CONDA_ENV" \
-            python -m http.server "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
+            python scripts/spa_server.py --port "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
     else
         info "Starting web on :${WEB_PORT} (Vite dev server — no dist found)..."
         cd frontend
@@ -264,9 +264,9 @@ case "$cmd" in
   serve)
     # Serve the pre-built frontend dist at port WEB_PORT using a simple static file server.
     # In production, Caddy proxies menagerie.circuitforge.tech/magpie* → this port.
-    info "Serving pre-built frontend on :${WEB_PORT} ..."
+    info "Serving pre-built frontend on :${WEB_PORT} (SPA fallback enabled)..."
     conda run --no-capture-output -n "$CONDA_ENV" \
-        python -m http.server "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
+        python scripts/spa_server.py --port "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
     echo $! > "$PID_WEB"
     ok "Static server up → http://localhost:${WEB_PORT}"
     ;;
