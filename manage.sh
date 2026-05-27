@@ -80,11 +80,19 @@ _start_web() {
         warn "Port :${WEB_PORT} already in use by another process — stop it first or change WEB_PORT"
         return
     fi
-    info "Starting web on :${WEB_PORT}..."
-    cd frontend
-    npm run dev >> "$LOG_WEB" 2>&1 &
+    # Prefer the pre-built dist (production) over Vite dev server.
+    # Run `./manage.sh build` first to produce frontend/dist/.
+    if [[ -f "frontend/dist/index.html" ]]; then
+        info "Starting web on :${WEB_PORT} (static dist — production mode)..."
+        conda run --no-capture-output -n "$CONDA_ENV" \
+            python -m http.server "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
+    else
+        info "Starting web on :${WEB_PORT} (Vite dev server — no dist found)..."
+        cd frontend
+        npm run dev >> "$LOG_WEB" 2>&1 &
+        cd "$REPO_DIR"
+    fi
     echo $! > "$PID_WEB"
-    cd "$REPO_DIR"
     local i=0
     while ! _port_open "$WEB_PORT" && (( i++ < 20 )); do sleep 0.5; done
     if _port_open "$WEB_PORT"; then
