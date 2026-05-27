@@ -42,19 +42,46 @@ class RedditClient:
             self._modhash = resp.json().get("data", {}).get("modhash", "")
         return self._modhash
 
-    def post(self, sub: str, title: str, body: str, flair: str | None = None) -> str:
-        """Submit a text post via Reddit legacy API (httpx). Returns the permalink."""
-        data = {
-            "api_type": "json",
-            "kind": "self",
-            "sr": sub,
-            "title": title,
-            "text": body,
-            "uh": self.modhash,
-            "sendreplies": "true",
-            "nsfw": "false",
-            "spoiler": "false",
-        }
+    def post(
+        self,
+        sub: str,
+        title: str,
+        body: str,
+        flair: str | None = None,
+        link_url: str | None = None,
+    ) -> str:
+        """Submit a post via Reddit legacy API (httpx). Returns the permalink.
+
+        If link_url is provided and body is empty, submits as a link post (kind=link).
+        If both link_url and body are provided, submits as a text post with the URL
+        embedded — Reddit link posts don't support body text.
+        """
+        if link_url and not body:
+            kind = "link"
+            data: dict = {
+                "api_type": "json",
+                "kind": kind,
+                "sr": sub,
+                "title": title,
+                "url": link_url,
+                "uh": self.modhash,
+                "sendreplies": "true",
+                "nsfw": "false",
+                "spoiler": "false",
+            }
+        else:
+            kind = "self"
+            data = {
+                "api_type": "json",
+                "kind": kind,
+                "sr": sub,
+                "title": title,
+                "text": body,
+                "uh": self.modhash,
+                "sendreplies": "true",
+                "nsfw": "false",
+                "spoiler": "false",
+            }
         resp = httpx.post(
             "https://www.reddit.com/api/submit",
             cookies=self.cookies,

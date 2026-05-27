@@ -15,8 +15,12 @@ class Settings(BaseSettings):
     # Database
     db_path: str = str(Path.home() / ".local" / "share" / "magpie" / "magpie.db")
 
-    # Reddit session
-    reddit_session_file: str = str(Path.home() / ".local" / "share" / "magpie" / "session.json")
+    # Session files — multi-user layout
+    # sessions_dir holds per-account JSON files: alan_reddit.json, cf_reddit.json, etc.
+    # reddit_session_file kept for backward compat; still used by the campaign scheduler
+    # until all callers are migrated to look up session via team_accounts.
+    sessions_dir: str = str(Path.home() / ".local" / "share" / "magpie" / "sessions")
+    reddit_session_file: str = str(Path.home() / ".local" / "share" / "magpie" / "sessions" / "alan_reddit.json")
 
     # Scheduler
     scheduler_enabled: bool = True

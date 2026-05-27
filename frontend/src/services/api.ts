@@ -42,6 +42,7 @@ export interface Variant {
   body: string
   flair: string | null
   notes: string | null
+  link_url: string | null
   created_at: string
   updated_at: string
 }
@@ -52,6 +53,7 @@ export interface VariantCreate {
   body: string
   flair?: string | null
   notes?: string | null
+  link_url?: string | null
 }
 
 export interface CampaignSub {

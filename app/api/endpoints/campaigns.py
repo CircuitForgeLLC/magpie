@@ -51,6 +51,7 @@ class VariantCreate(BaseModel):
     body: str
     flair: str | None = None
     notes: str | None = None
+    link_url: str | None = None
 
 
 class VariantUpdate(BaseModel):
@@ -59,6 +60,7 @@ class VariantUpdate(BaseModel):
     body: str | None = None
     flair: str | None = None
     notes: str | None = None
+    link_url: str | None = None
 
 
 class SubEntry(BaseModel):

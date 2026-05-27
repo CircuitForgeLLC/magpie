@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.endpoints import blog, campaigns, opportunities, posts, reddit, scheduler, signals, stats, subs
+from app.api.endpoints import blog, campaigns, opportunities, posts, reddit, scheduler, signals, stats, subs, team
 
 
 def register_routes(app: FastAPI) -> None:
@@ -13,3 +13,4 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(blog.router, prefix="/api/v1")
     app.include_router(reddit.router, prefix="/api/v1")
     app.include_router(stats.router, prefix="/api/v1")
+    app.include_router(team.router, prefix="/api/v1")

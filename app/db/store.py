@@ -167,10 +167,11 @@ class Store:
 
     def create_variant(self, campaign_id: int, title: str, body: str,
                        sub_pattern: str = "*", flair: str | None = None,
-                       notes: str | None = None) -> dict:
+                       notes: str | None = None, link_url: str | None = None) -> dict:
         return self._insert_returning(
-            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair, notes) VALUES (?,?,?,?,?,?) RETURNING *",
-            (campaign_id, sub_pattern, title, body, flair, notes),
+            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair, notes, link_url)"
+            " VALUES (?,?,?,?,?,?,?) RETURNING *",
+            (campaign_id, sub_pattern, title, body, flair, notes, link_url),
         )
 
     def upsert_variant(
@@ -183,6 +184,7 @@ class Store:
         slug: str | None = None,
         tags: str | None = None,
         seo_description: str | None = None,
+        link_url: str | None = None,
     ) -> dict:
         existing = self._fetchone(
             "SELECT * FROM campaign_variants WHERE campaign_id = ? AND sub_pattern = ?",
@@ -190,19 +192,22 @@ class Store:
         )
         if existing:
             self.conn.execute(
-                "UPDATE campaign_variants SET title=?, body=?, flair=?, slug=?, tags=?, seo_description=? WHERE id=?",
-                (title, body, flair, slug, tags, seo_description, existing["id"]),
+                "UPDATE campaign_variants SET title=?, body=?, flair=?, slug=?, tags=?,"
+                " seo_description=?, link_url=? WHERE id=?",
+                (title, body, flair, slug, tags, seo_description, link_url, existing["id"]),
             )
             self.conn.commit()
             return self._fetchone("SELECT * FROM campaign_variants WHERE id=?", (existing["id"],))
         return self._insert_returning(
-            "INSERT INTO campaign_variants (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description)"
-            " VALUES (?,?,?,?,?,?,?,?) RETURNING *",
-            (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description),
+            "INSERT INTO campaign_variants"
+            " (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description, link_url)"
+            " VALUES (?,?,?,?,?,?,?,?,?) RETURNING *",
+            (campaign_id, sub_pattern, title, body, flair, slug, tags, seo_description, link_url),
         )
 
     def update_variant(self, variant_id: int, **fields) -> dict | None:
-        allowed = {"sub_pattern", "title", "body", "flair", "notes"}
+        allowed = {"sub_pattern", "title", "body", "flair", "notes",
+                   "slug", "tags", "seo_description", "link_url"}
         updates = {k: v for k, v in fields.items() if k in allowed}
         if not updates:
             return self.get_variant(variant_id)
@@ -623,3 +628,63 @@ class Store:
             "SELECT * FROM signal_scrape_state WHERE platform = ? ORDER BY sub",
             (platform,),
         )
+
+    # ------------------------------------------------------------------ #
+    # Team accounts (multi-user — migration 020)
+    # ------------------------------------------------------------------ #
+
+    def list_team_accounts(
+        self, platform: str | None = None, active_only: bool = True
+    ) -> list[dict]:
+        if platform:
+            sql = "SELECT * FROM team_accounts WHERE platform = ?"
+            params: tuple = (platform,)
+            if active_only:
+                sql += " AND active = 1"
+        else:
+            sql = "SELECT * FROM team_accounts"
+            params = ()
+            if active_only:
+                sql += " WHERE active = 1"
+        sql += " ORDER BY display_name, platform"
+        return self._fetchall(sql, params)
+
+    def get_team_account(self, account_id: int) -> dict | None:
+        return self._fetchone(
+            "SELECT * FROM team_accounts WHERE id = ?", (account_id,)
+        )
+
+    def get_team_account_by_username(self, platform: str, username: str) -> dict | None:
+        return self._fetchone(
+            "SELECT * FROM team_accounts WHERE platform = ? AND username = ?",
+            (platform, username),
+        )
+
+    def create_team_account(
+        self,
+        display_name: str,
+        platform: str,
+        username: str,
+        account_type: str = "personal",
+        session_file: str | None = None,
+        notes: str | None = None,
+    ) -> dict:
+        return self._insert_returning(
+            "INSERT INTO team_accounts"
+            " (display_name, platform, username, account_type, session_file, notes)"
+            " VALUES (?,?,?,?,?,?) RETURNING *",
+            (display_name, platform, username, account_type, session_file, notes),
+        )
+
+    def assign_opportunity(
+        self,
+        opp_id: int,
+        assigned_to: int | None,
+        post_as: int | None = None,
+    ) -> dict | None:
+        self.conn.execute(
+            "UPDATE opportunities SET assigned_to = ?, post_as = ? WHERE id = ?",
+            (assigned_to, post_as, opp_id),
+        )
+        self.conn.commit()
+        return self.get_opportunity(opp_id)

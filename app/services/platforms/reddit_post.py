@@ -21,5 +21,6 @@ class RedditPostStrategy(PostingStrategy):
     ) -> PostResult:
         settings = get_settings()
         client = RedditClient(session_file=settings.reddit_session_file)
-        url = client.post(sub=target, title=title, body=body, flair=flair)
+        link_url = (extra or {}).get("link_url") or None
+        url = client.post(sub=target, title=title, body=body, flair=flair, link_url=link_url)
         return PostResult(url=url)

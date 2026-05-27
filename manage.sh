@@ -244,9 +244,33 @@ case "$cmd" in
     ok "Update complete"
     ;;
 
+  build)
+    # Build the frontend SPA for production serving on menagerie.circuitforge.tech/magpie
+    # VITE_BASE_URL must end with / so Vite generates correct asset paths.
+    info "Building frontend for /magpie/ path prefix..."
+    cd frontend && VITE_BASE_URL=/magpie/ npm run build && cd ..
+    ok "Build complete → frontend/dist/ (base=/magpie/)"
+    info "Serving: ./manage.sh serve"
+    ;;
+
+  serve)
+    # Serve the pre-built frontend dist at port WEB_PORT using a simple static file server.
+    # In production, Caddy proxies menagerie.circuitforge.tech/magpie* → this port.
+    info "Serving pre-built frontend on :${WEB_PORT} ..."
+    conda run --no-capture-output -n "$CONDA_ENV" \
+        python -m http.server "$WEB_PORT" --directory frontend/dist >> "$LOG_WEB" 2>&1 &
+    echo $! > "$PID_WEB"
+    ok "Static server up → http://localhost:${WEB_PORT}"
+    ;;
+
+  migrate-sessions)
+    info "Migrating session.json → sessions/ directory..."
+    conda run -n "$CONDA_ENV" python scripts/migrate_sessions.py
+    ;;
+
   login)
     info "Refreshing Reddit session (opens browser via Xvfb)..."
-    REDDIT_SESSION_FILE="${DATA_DIR}/session.json" \
+    REDDIT_SESSION_FILE="${DATA_DIR}/sessions/alan_reddit.json" \
         conda run --no-capture-output -n "$CONDA_ENV" \
         xvfb-run --auto-servernum \
         python -m app.services.reddit.post --login
@@ -288,11 +312,14 @@ EOF
     echo "    Logs at: ${LOG_DIR}/"
     echo ""
     echo "  Maintenance:"
-    echo "    update         git pull + pip/npm install + API restart"
-    echo "    migrate        Run DB migrations standalone"
-    echo "    seed           Seed campaigns from legacy scripts"
-    echo "    login          Refresh Reddit Playwright session"
-    echo "    open           Open dashboard in browser"
+    echo "    update           git pull + pip/npm install + API restart"
+    echo "    migrate          Run DB migrations standalone"
+    echo "    migrate-sessions Move session.json → sessions/alan_reddit.json"
+    echo "    seed             Seed campaigns from legacy scripts"
+    echo "    login            Refresh Reddit Playwright session"
+    echo "    build            Build frontend for menagerie (/magpie/ base path)"
+    echo "    serve            Serve pre-built frontend dist on :${WEB_PORT}"
+    echo "    open             Open dashboard in browser"
     echo ""
     ;;
 esac

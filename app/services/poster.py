@@ -88,9 +88,9 @@ def _run_post(db_path: str, campaign_id: int, target: str,
         )
         post_id = post["id"]
 
-        # Build extra dict from sub_row; merge variant-level blog fields (blog_post strategy uses them)
+        # Build extra dict from sub_row; merge variant-level fields used by strategies
         extra = dict(sub_row)
-        for field in ("slug", "tags", "seo_description"):
+        for field in ("slug", "tags", "seo_description", "link_url"):
             if variant.get(field) is not None:
                 extra.setdefault(field, variant[field])
 

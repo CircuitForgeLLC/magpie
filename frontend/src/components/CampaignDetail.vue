@@ -31,6 +31,10 @@
               <button class="btn btn-ghost btn-sm" style="margin-left: auto;" @click="deleteVariant(v.id)">✕</button>
             </div>
             <div style="font-weight: 500; font-size: 13px; margin-bottom: 2px;">{{ v.title }}</div>
+            <div v-if="v.link_url" style="font-size: 11px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+              <a :href="v.link_url" target="_blank" rel="noopener" style="color: var(--color-accent); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;">{{ v.link_url }}</a>
+              <button class="btn btn-ghost" style="padding: 0 4px; font-size: 11px;" @click="copyText(v.link_url!)" title="Copy URL">📋</button>
+            </div>
             <div style="color: var(--color-text-muted); font-size: 12px; white-space: pre-wrap; max-height: 60px; overflow: hidden;">{{ v.body }}</div>
           </div>
         </div>
@@ -101,7 +105,14 @@
           <input class="form-input" v-model="variantForm.title" placeholder="Post title..." />
         </div>
         <div class="form-group">
-          <label class="form-label">Body</label>
+          <label class="form-label">Link URL <span style="color: var(--color-text-muted)">(optional — use for link posts; if set with no body, posts as link-type)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input class="form-input" v-model="variantForm.link_url" placeholder="https://git.opensourcesolarpunk.com/..." style="flex: 1;" />
+            <button v-if="variantForm.link_url" class="btn btn-ghost" style="flex-shrink: 0;" @click="copyText(variantForm.link_url)" title="Copy URL">📋</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Body <span style="color: var(--color-text-muted)">(leave empty to post as link-type using the URL above)</span></label>
           <textarea class="form-textarea" v-model="variantForm.body" rows="8" placeholder="Post body (markdown)..." style="min-height: 200px;" />
         </div>
         <div class="form-group">
@@ -110,7 +121,7 @@
         </div>
         <div style="display: flex; gap: var(--spacing-sm); justify-content: flex-end;">
           <button class="btn btn-ghost" @click="showAddVariant = false">Cancel</button>
-          <button class="btn btn-primary" @click="addVariant" :disabled="!variantForm.title || !variantForm.body">Add Variant</button>
+          <button class="btn btn-primary" @click="addVariant" :disabled="!variantForm.title || (!variantForm.body && !variantForm.link_url)">Add Variant</button>
         </div>
       </div>
     </div>
@@ -204,7 +215,7 @@ const showAddSub = ref(false)
 const copyModal = reactive({ sub: '', title: '', body: '', url: '', notes: '' })
 const copied = ref('')
 
-const variantForm = reactive({ sub_pattern: '*', title: '', body: '', flair: '', notes: '' })
+const variantForm = reactive({ sub_pattern: '*', title: '', body: '', flair: '', notes: '', link_url: '' })
 const subForm = reactive({ sub: '' })
 
 onMounted(async () => {
@@ -258,10 +269,11 @@ async function addVariant() {
       body: variantForm.body,
       flair: variantForm.flair || null,
       notes: variantForm.notes || null,
+      link_url: variantForm.link_url || null,
     })
     variants.value = [...variants.value, v]
     showAddVariant.value = false
-    Object.assign(variantForm, { sub_pattern: '*', title: '', body: '', flair: '', notes: '' })
+    Object.assign(variantForm, { sub_pattern: '*', title: '', body: '', flair: '', notes: '', link_url: '' })
   } catch (e: unknown) {
     toast.error(`Failed to add variant: ${e instanceof Error ? e.message : 'Unknown error'}`)
   }
@@ -320,6 +332,14 @@ async function copy(text: string, which: string) {
   await navigator.clipboard.writeText(text)
   copied.value = which
   setTimeout(() => { copied.value = '' }, 2000)
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    toast.error('Could not copy to clipboard')
+  }
 }
 
 function formatDate(iso: string) {

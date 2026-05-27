@@ -27,6 +27,7 @@ def test_execute_delegates_to_reddit_client(tmp_path):
         title="Test Title",
         body="Test body",
         flair="Showcase",
+        link_url=None,
     )
     assert isinstance(result, PostResult)
     assert result.url == "https://reddit.com/r/test/comments/abc/title/"
