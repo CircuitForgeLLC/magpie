@@ -26,7 +26,7 @@ function parseDow(dow: string): string {
   }
   // Range: 1-5
   if (dow.includes('-')) {
-    const [start, end] = dow.split('-').map(Number)
+    const [start, end] = dow.split('-').map(Number) as [number, number]
     if (start === 1 && end === 5) return 'Weekdays'
     if (start === 0 && end === 6) return 'Every day'
     return `${DAYS[start]}-${DAYS[end]}`
@@ -45,7 +45,8 @@ export function humanizeCron(expr: string | null | undefined): string {
   const parts = expr.trim().split(/\s+/)
   if (parts.length !== 5) return expr
 
-  const [minute, hour, dom, month, dow] = parts
+  // Cast to tuple — length guard above guarantees all five are present.
+  const [minute, hour, dom, month, dow] = parts as [string, string, string, string, string]
 
   const everyMinute = minute === '*'
   const everyHour = hour === '*'

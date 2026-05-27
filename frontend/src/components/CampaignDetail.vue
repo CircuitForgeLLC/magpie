@@ -240,7 +240,7 @@ onMounted(async () => {
 async function triggerSub(sub: string) {
   triggeringSub.value = sub
   try {
-    await api.posts.trigger(campaignId, sub)
+    await api.posts.triggerSingle(campaignId, sub)
     recentPosts.value = await api.posts.list(campaignId, undefined, 20)
   } catch (e: unknown) {
     toast.error(`Trigger failed for ${sub}: ${e instanceof Error ? e.message : 'Unknown error'}`)
