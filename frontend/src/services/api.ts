@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const http = axios.create({ baseURL: '/api/v1' })
+const http = axios.create({ baseURL: `${import.meta.env.BASE_URL}api/v1` })
 
 // ------------------------------------------------------------------ //
 // Types
