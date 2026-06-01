@@ -7,6 +7,7 @@ Session cookies are stored in a JSON file and refreshed automatically when stale
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -33,7 +34,7 @@ def session_is_valid(session_file: Path | None = None) -> bool:
 
 
 def refresh_session(session_file: Path | None = None) -> None:
-    """Re-login via Playwright (xvfb-run) and overwrite session.json."""
+    """Re-login via Playwright (xvfb-run) and overwrite the session file."""
     if session_file is None:
         session_file = Path(get_settings().reddit_session_file)
     session_file.parent.mkdir(parents=True, exist_ok=True)
@@ -41,6 +42,7 @@ def refresh_session(session_file: Path | None = None) -> None:
     result = subprocess.run(
         ["xvfb-run", "--auto-servernum", sys.executable, str(_POST_SCRIPT), "--login"],
         cwd=str(_POST_SCRIPT.parent),
+        env={**os.environ, "REDDIT_SESSION_FILE": str(session_file)},
         timeout=120,
     )
     if result.returncode != 0:

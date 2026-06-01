@@ -196,8 +196,8 @@ case "$cmd" in
         info "  Scheduler ${sched} scheduled"
     fi
 
-    # Session age
-    SESSION_FILE="${DATA_DIR}/session.json"
+    # Session age — check the canonical per-account file, not the legacy session.json
+    SESSION_FILE="${DATA_DIR}/sessions/alan_reddit.json"
     if [[ -f "$SESSION_FILE" ]]; then
         age_h=$(python3 -c "import time,os; print(f\"{(time.time()-os.path.getmtime('$SESSION_FILE'))/3600:.1f}h\")" 2>/dev/null || echo "?")
         if python3 -c "import time,os; exit(0 if (time.time()-os.path.getmtime('$SESSION_FILE'))/3600 < 12 else 1)" 2>/dev/null; then
@@ -206,7 +206,7 @@ case "$cmd" in
             warn "  Session   ${age_h} old (stale — run: ./manage.sh login)"
         fi
     else
-        warn "  Session   no session.json — run: ./manage.sh login"
+        warn "  Session   no session file — run: ./manage.sh login"
     fi
 
     echo ""
