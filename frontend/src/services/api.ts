@@ -199,6 +199,19 @@ export interface Signal {
   matched_rules?: SignalRule[]
 }
 
+export interface SessionStatus {
+  target: string
+  valid: boolean
+  age_hours: number | null
+  session_file: string
+}
+
+export interface RefreshResult {
+  target: string
+  ok: boolean
+  message: string
+}
+
 // ------------------------------------------------------------------ //
 // Campaigns
 // ------------------------------------------------------------------ //
@@ -312,6 +325,13 @@ export const api = {
 
     updateStatus: (id: number, status: SignalStatus, notes?: string) =>
       http.patch<Signal>(`/signals/${id}/status`, { status, notes: notes ?? null }).then(r => r.data),
+  },
+
+  reddit: {
+    sessionStatus: (target = 'magpie') =>
+      http.get<SessionStatus>('/reddit/session-status', { params: { target } }).then(r => r.data),
+    refreshSession: (target = 'magpie') =>
+      http.post<RefreshResult>('/reddit/refresh-session', null, { params: { target } }).then(r => r.data),
   },
 
   stats: () => http.get('/stats').then(r => r.data),

@@ -18,6 +18,7 @@
       <router-link class="nav-link" to="/subs" active-class="active">
         <span>📖</span> Sub Rules
       </router-link>
+      <SessionWidget class="sidebar-session" />
     </nav>
 
     <!-- Main -->
@@ -58,4 +59,11 @@
 <script setup lang="ts">
 import ToastList from './components/ToastList.vue'
 import StatsBar from './components/StatsBar.vue'
+import SessionWidget from './components/SessionWidget.vue'
 </script>
+
+<style scoped>
+.sidebar-session {
+  margin-top: auto;
+}
+</style>
